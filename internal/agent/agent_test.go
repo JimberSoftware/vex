@@ -2,7 +2,6 @@ package agent_test
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"net"
 	"sync"
@@ -44,12 +43,12 @@ func (m *mockListener) Addr() net.Addr { return &net.TCPAddr{} }
 func TestRun_ExitsCleanlyOnContextCancel(t *testing.T) {
 	t.Parallel()
 
-	l := newMockListener()
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	listener := newMockListener()
+	logger := slog.New(slog.DiscardHandler)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	done := make(chan error, 1)
-	go func() { done <- agent.Run(ctx, l, logger) }()
+	go func() { done <- agent.Run(ctx, listener, logger) }()
 
 	cancel()
 
@@ -66,16 +65,16 @@ func TestRun_ExitsCleanlyOnContextCancel(t *testing.T) {
 func TestRun_AcceptsConnection(t *testing.T) {
 	t.Parallel()
 
-	l := newMockListener()
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	listener := newMockListener()
+	logger := slog.New(slog.DiscardHandler)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	serverConn, clientConn := net.Pipe()
-	l.conns <- serverConn
+	listener.conns <- serverConn
 
 	done := make(chan error, 1)
-	go func() { done <- agent.Run(ctx, l, logger) }()
+	go func() { done <- agent.Run(ctx, listener, logger) }()
 
 	_, _ = clientConn.Write([]byte("hello"))
 	clientConn.Close()

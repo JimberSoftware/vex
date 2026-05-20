@@ -1,4 +1,3 @@
-// Package agent implements the guest-side command execution logic.
 package agent
 
 import (
@@ -18,7 +17,7 @@ func Run(ctx context.Context, ln net.Listener, log *slog.Logger) error {
 		conn, err := ln.Accept()
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil
+				return ctx.Err()
 			}
 			return err
 		}

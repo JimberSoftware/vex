@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/jimbersoftware/vex/internal/agent"
-	internalvsock "github.com/jimbersoftware/vex/internal/vsock"
+	"github.com/jimbersoftware/vex/internal/vsock"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ func main() {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			log := slog.Default()
 
-			ln, err := internalvsock.Listen(cid, port)
+			ln, err := vsock.Listen(cid, port)
 			if err != nil {
 				return err
 			}
@@ -49,4 +49,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
