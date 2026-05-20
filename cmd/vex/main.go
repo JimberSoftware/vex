@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
 
-	"github.com/jimbersoftware/vex/internal/vmp"
-	"github.com/jimbersoftware/vex/internal/vsock"
+	"github.com/jimbersoftware/vex/client"
 	"github.com/spf13/cobra"
 )
 
@@ -34,35 +31,18 @@ func main() {
 	}
 }
 
-func connect(cid, port uint32) (net.Conn, *bufio.Reader, error) {
-	conn, err := vsock.Dial(cid, port)
-	if err != nil {
-		return nil, nil, fmt.Errorf("connect cid=%d port=%d: %w", cid, port, err)
-	}
-	return conn, bufio.NewReader(conn), nil
-}
-
 func pingCmd(cid, port *uint32) *cobra.Command {
 	return &cobra.Command{
 		Use:   "ping",
 		Short: "Send a ping and expect pong",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			conn, br, err := connect(*cid, *port)
+			c, err := client.Dial(*cid, *port)
 			if err != nil {
 				return err
 			}
-			defer conn.Close()
-
-			req := &vmp.Request{Id: 1, Command: &vmp.Request_Ping{Ping: &vmp.PingRequest{}}}
-			if err := vmp.WriteRequest(conn, req); err != nil {
+			defer c.Close()
+			if err := c.Ping(); err != nil {
 				return err
-			}
-			resp, err := vmp.ReadResponse(br)
-			if err != nil {
-				return err
-			}
-			if resp.Error != "" {
-				return fmt.Errorf("agent error: %s", resp.Error)
 			}
 			fmt.Println("pong")
 			return nil
@@ -75,24 +55,15 @@ func hostInfoCmd(cid, port *uint32) *cobra.Command {
 		Use:   "host-info",
 		Short: "Retrieve host OS information",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			conn, br, err := connect(*cid, *port)
+			c, err := client.Dial(*cid, *port)
 			if err != nil {
 				return err
 			}
-			defer conn.Close()
-
-			req := &vmp.Request{Id: 1, Command: &vmp.Request_HostInfo{HostInfo: &vmp.HostInfoRequest{}}}
-			if err := vmp.WriteRequest(conn, req); err != nil {
-				return err
-			}
-			resp, err := vmp.ReadResponse(br)
+			defer c.Close()
+			hi, err := c.HostInfo()
 			if err != nil {
 				return err
 			}
-			if resp.Error != "" {
-				return fmt.Errorf("agent error: %s", resp.Error)
-			}
-			hi := resp.Result.(*vmp.Response_HostInfo).HostInfo
 			out, _ := json.MarshalIndent(map[string]string{
 				"os":      hi.Os,
 				"version": hi.Version,
@@ -111,30 +82,15 @@ func execCmd(cid, port *uint32) *cobra.Command {
 		Short: "Execute a command on the agent host",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			conn, br, err := connect(*cid, *port)
+			c, err := client.Dial(*cid, *port)
 			if err != nil {
 				return err
 			}
-			defer conn.Close()
-
-			req := &vmp.Request{
-				Id: 1,
-				Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
-					Command:        args[0],
-					TimeoutSeconds: timeout,
-				}},
-			}
-			if err := vmp.WriteRequest(conn, req); err != nil {
-				return err
-			}
-			resp, err := vmp.ReadResponse(br)
+			defer c.Close()
+			ex, err := c.Exec(args[0], timeout)
 			if err != nil {
 				return err
 			}
-			if resp.Error != "" {
-				return fmt.Errorf("agent error: %s", resp.Error)
-			}
-			ex := resp.Result.(*vmp.Response_Exec).Exec
 			if len(ex.Stdout) > 0 {
 				fmt.Print(string(ex.Stdout))
 			}
