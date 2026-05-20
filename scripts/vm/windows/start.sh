@@ -40,5 +40,5 @@ exec qemu-system-x86_64 \
   -device vhost-vsock-pci,guest-cid=4 \
   -netdev user,id=net0,hostfwd=tcp::2223-:22 \
   -device virtio-net-pci,netdev=net0 \
-  -nographic -serial none \
+  -display vnc=:2 \
   -monitor unix:"$MONITOR",server,nowait
