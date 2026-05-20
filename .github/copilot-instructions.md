@@ -12,3 +12,4 @@ applyTo: "**"
   - Regulatory/compliance requirements
 - Do not create README files unless asked to do so
 - Never add agent as co author in commit messages, even if the agent contributed to the code. The agent is a tool, not a person, and should not be credited as an author.
+- never commit spec files
