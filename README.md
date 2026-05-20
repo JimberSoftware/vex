@@ -1,5 +1,3 @@
-# vex
-
 ![VEX](image.png)
 
 ## vex-agent
