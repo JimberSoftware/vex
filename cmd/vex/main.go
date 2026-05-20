@@ -26,6 +26,7 @@ func main() {
 	root.AddCommand(
 		pingCmd(&cid, &port),
 		hostInfoCmd(&cid, &port),
+		execCmd(&cid, &port),
 	)
 
 	if err := root.Execute(); err != nil {
@@ -101,4 +102,54 @@ func hostInfoCmd(cid, port *uint32) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func execCmd(cid, port *uint32) *cobra.Command {
+	var timeout uint32
+	cmd := &cobra.Command{
+		Use:   "exec <command>",
+		Short: "Execute a command on the agent host",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			conn, br, err := connect(*cid, *port)
+			if err != nil {
+				return err
+			}
+			defer conn.Close()
+
+			req := &vmp.Request{
+				Id: 1,
+				Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
+					Command:        args[0],
+					TimeoutSeconds: timeout,
+				}},
+			}
+			if err := vmp.WriteRequest(conn, req); err != nil {
+				return err
+			}
+			resp, err := vmp.ReadResponse(br)
+			if err != nil {
+				return err
+			}
+			if resp.Error != "" {
+				return fmt.Errorf("agent error: %s", resp.Error)
+			}
+			ex := resp.Result.(*vmp.Response_Exec).Exec
+			if len(ex.Stdout) > 0 {
+				fmt.Print(string(ex.Stdout))
+			}
+			if len(ex.Stderr) > 0 {
+				fmt.Fprint(os.Stderr, string(ex.Stderr))
+			}
+			if ex.TimedOut {
+				fmt.Fprintln(os.Stderr, "timed out")
+			}
+			if ex.ExitCode != 0 {
+				os.Exit(int(ex.ExitCode))
+			}
+			return nil
+		},
+	}
+	cmd.Flags().Uint32Var(&timeout, "timeout", 0, "timeout in seconds (0 = no timeout)")
+	return cmd
 }
