@@ -30,7 +30,7 @@ type Client struct {
 	seq  atomic.Uint64
 }
 
-func Dial(cid, port uint32) (*Client, error) {
+func New(cid, port uint32) (*Client, error) {
 	conn, err := vsock.Dial(cid, port)
 	if err != nil {
 		return nil, fmt.Errorf("dial cid=%d port=%d: %w", cid, port, err)

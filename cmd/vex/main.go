@@ -38,7 +38,7 @@ func pingCmd(cid, port *uint32) *cobra.Command {
 		Use:   "ping",
 		Short: "Send a ping and expect pong",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			c, err := client.Dial(*cid, *port)
+			c, err := client.New(*cid, *port)
 			if err != nil {
 				return err
 			}
@@ -57,7 +57,7 @@ func hostInfoCmd(cid, port *uint32) *cobra.Command {
 		Use:   "host-info",
 		Short: "Retrieve host OS information",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			c, err := client.Dial(*cid, *port)
+			c, err := client.New(*cid, *port)
 			if err != nil {
 				return err
 			}
@@ -84,7 +84,7 @@ func execCmd(cid, port *uint32) *cobra.Command {
 		Short: "Execute a command on the agent host",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			c, err := client.Dial(*cid, *port)
+			c, err := client.New(*cid, *port)
 			if err != nil {
 				return err
 			}
