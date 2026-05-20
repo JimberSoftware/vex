@@ -10,6 +10,19 @@ import (
 	"github.com/jimbersoftware/vex/internal/vsock"
 )
 
+type HostInfo struct {
+	OS      string
+	Version string
+	Arch    string
+}
+
+type ExecResult struct {
+	Stdout   []byte
+	Stderr   []byte
+	ExitCode int32
+	TimedOut bool
+}
+
 type Client struct {
 	conn net.Conn
 	br   *bufio.Reader
@@ -21,7 +34,11 @@ func Dial(cid, port uint32) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("dial cid=%d port=%d: %w", cid, port, err)
 	}
-	return &Client{conn: conn, br: bufio.NewReader(conn)}, nil
+	return NewFromConn(conn), nil
+}
+
+func NewFromConn(conn net.Conn) *Client {
+	return &Client{conn: conn, br: bufio.NewReader(conn)}
 }
 
 func (c *Client) Close() error {
@@ -39,31 +56,40 @@ func (c *Client) Ping() error {
 	return nil
 }
 
-func (c *Client) HostInfo() (*vmp.HostInfoResponse, error) {
+func (c *Client) HostInfo() (HostInfo, error) {
 	resp, err := c.send(&vmp.Request{Command: &vmp.Request_HostInfo{HostInfo: &vmp.HostInfoRequest{}}})
 	if err != nil {
-		return nil, err
+		return HostInfo{}, err
 	}
 	hi, ok := resp.Result.(*vmp.Response_HostInfo)
 	if !ok {
-		return nil, fmt.Errorf("unexpected response type")
+		return HostInfo{}, fmt.Errorf("unexpected response type")
 	}
-	return hi.HostInfo, nil
+	return HostInfo{
+		OS:      hi.HostInfo.Os,
+		Version: hi.HostInfo.Version,
+		Arch:    hi.HostInfo.Arch,
+	}, nil
 }
 
-func (c *Client) Exec(command string, timeoutSeconds uint32) (*vmp.ExecResponse, error) {
+func (c *Client) Exec(command string, timeoutSeconds uint32) (ExecResult, error) {
 	resp, err := c.send(&vmp.Request{Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
 		Command:        command,
 		TimeoutSeconds: timeoutSeconds,
 	}}})
 	if err != nil {
-		return nil, err
+		return ExecResult{}, err
 	}
 	ex, ok := resp.Result.(*vmp.Response_Exec)
 	if !ok {
-		return nil, fmt.Errorf("unexpected response type")
+		return ExecResult{}, fmt.Errorf("unexpected response type")
 	}
-	return ex.Exec, nil
+	return ExecResult{
+		Stdout:   ex.Exec.Stdout,
+		Stderr:   ex.Exec.Stderr,
+		ExitCode: ex.Exec.ExitCode,
+		TimedOut: ex.Exec.TimedOut,
+	}, nil
 }
 
 func (c *Client) send(req *vmp.Request) (*vmp.Response, error) {
