@@ -1,5 +1,7 @@
 # vex
 
+![VEX](image.png)
+
 ## vex-agent
 
 Guest-side agent that listens for incoming vsocket connections.
@@ -16,10 +18,10 @@ go build ./cmd/vex-agent/
 vex-agent [--cid <uint32>] [--port <uint32>]
 ```
 
-| Flag | Default | Description |
-|---|---|---|
-| `--port` | `1024` | vsocket port to listen on |
-| `--cid` | `4294967295` | Context ID to bind (`4294967295` = `VMADDR_CID_ANY`, binds all CIDs) |
+| Flag     | Default      | Description                                                          |
+| -------- | ------------ | -------------------------------------------------------------------- |
+| `--port` | `1024`       | vsocket port to listen on                                            |
+| `--cid`  | `4294967295` | Context ID to bind (`4294967295` = `VMADDR_CID_ANY`, binds all CIDs) |
 
 ### Local loopback testing (Linux)
 
