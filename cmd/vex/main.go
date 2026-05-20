@@ -65,7 +65,7 @@ func hostInfoCmd(cid, port *uint32) *cobra.Command {
 				return err
 			}
 			out, _ := json.MarshalIndent(map[string]string{
-				"os":      hi.Os,
+				"os":      hi.OS,
 				"version": hi.Version,
 				"arch":    hi.Arch,
 			}, "", "  ")
