@@ -18,11 +18,11 @@ func Run(ctx context.Context, ln net.Listener, log *slog.Logger) error {
 		conn, err := ln.Accept()
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil
+				return nil //nolint:nilerr // listener closed due to graceful shutdown
 			}
 			return err
 		}
 		log.Info("connection accepted", "remote", conn.RemoteAddr())
-		go commands.Handle(conn)
+		go commands.Handle(ctx, conn)
 	}
 }

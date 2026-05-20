@@ -25,10 +25,10 @@ func TestRequestRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadRequest: %v", err)
 	}
-	if got.Id != 42 {
-		t.Errorf("id: got %d, want 42", got.Id)
+	if got.GetId() != 42 {
+		t.Errorf("id: got %d, want 42", got.GetId())
 	}
-	if _, ok := got.Command.(*vmp.Request_Ping); !ok {
+	if _, ok := got.GetCommand().(*vmp.Request_Ping); !ok {
 		t.Error("expected ping command")
 	}
 }
@@ -50,10 +50,10 @@ func TestResponseRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadResponse: %v", err)
 	}
-	if got.Id != 7 {
-		t.Errorf("id: got %d, want 7", got.Id)
+	if got.GetId() != 7 {
+		t.Errorf("id: got %d, want 7", got.GetId())
 	}
-	if _, ok := got.Result.(*vmp.Response_Ping); !ok {
+	if _, ok := got.GetResult().(*vmp.Response_Ping); !ok {
 		t.Error("expected ping result")
 	}
 }

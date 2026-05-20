@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultPort uint32 = 1024
+
 func main() {
 	var cid uint32
 	var port uint32
@@ -18,7 +20,7 @@ func main() {
 		Short: "vex client — send VMP commands to vex-agent",
 	}
 	root.PersistentFlags().Uint32Var(&cid, "cid", 1, "vsocket context ID")
-	root.PersistentFlags().Uint32Var(&port, "port", 1024, "vsocket port")
+	root.PersistentFlags().Uint32Var(&port, "port", defaultPort, "vsocket port")
 
 	root.AddCommand(
 		pingCmd(&cid, &port),

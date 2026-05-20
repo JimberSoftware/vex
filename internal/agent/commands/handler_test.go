@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"bufio"
+	"context"
 	"net"
 	"strings"
 	"testing"
@@ -16,7 +17,7 @@ func sendAndReceive(t *testing.T, req *vmp.Request) *vmp.Response {
 	server, client := net.Pipe()
 	defer client.Close()
 
-	go commands.Handle(server)
+	go commands.Handle(context.Background(), server)
 
 	if err := vmp.WriteRequest(client, req); err != nil {
 		t.Fatalf("WriteRequest: %v", err)
@@ -36,14 +37,14 @@ func TestHandle_Ping(t *testing.T) {
 		Id:      1,
 		Command: &vmp.Request_Ping{Ping: &vmp.PingRequest{}},
 	})
-	if resp.Error != "" {
-		t.Fatalf("unexpected error: %s", resp.Error)
+	if resp.GetError() != "" {
+		t.Fatalf("unexpected error: %s", resp.GetError())
 	}
-	if _, ok := resp.Result.(*vmp.Response_Ping); !ok {
+	if _, ok := resp.GetResult().(*vmp.Response_Ping); !ok {
 		t.Error("expected PingResponse")
 	}
-	if resp.Id != 1 {
-		t.Errorf("id: got %d, want 1", resp.Id)
+	if resp.GetId() != 1 {
+		t.Errorf("id: got %d, want 1", resp.GetId())
 	}
 }
 
@@ -54,17 +55,17 @@ func TestHandle_HostInfo(t *testing.T) {
 		Id:      2,
 		Command: &vmp.Request_HostInfo{HostInfo: &vmp.HostInfoRequest{}},
 	})
-	if resp.Error != "" {
-		t.Fatalf("unexpected error: %s", resp.Error)
+	if resp.GetError() != "" {
+		t.Fatalf("unexpected error: %s", resp.GetError())
 	}
-	hi, ok := resp.Result.(*vmp.Response_HostInfo)
+	hi, ok := resp.GetResult().(*vmp.Response_HostInfo)
 	if !ok {
 		t.Fatal("expected HostInfoResponse")
 	}
-	if hi.HostInfo.Os == "" {
+	if hi.HostInfo.GetOs() == "" {
 		t.Error("Os should not be empty")
 	}
-	if hi.HostInfo.Arch == "" {
+	if hi.HostInfo.GetArch() == "" {
 		t.Error("Arch should not be empty")
 	}
 }
@@ -78,17 +79,17 @@ func TestHandle_Exec(t *testing.T) {
 			Command: "echo hello",
 		}},
 	})
-	if resp.Error != "" {
-		t.Fatalf("unexpected error: %s", resp.Error)
+	if resp.GetError() != "" {
+		t.Fatalf("unexpected error: %s", resp.GetError())
 	}
-	ex, ok := resp.Result.(*vmp.Response_Exec)
+	ex, ok := resp.GetResult().(*vmp.Response_Exec)
 	if !ok {
 		t.Fatal("expected ExecResponse")
 	}
-	if ex.Exec.ExitCode != 0 {
-		t.Errorf("exit_code: got %d, want 0", ex.Exec.ExitCode)
+	if ex.Exec.GetExitCode() != 0 {
+		t.Errorf("exit_code: got %d, want 0", ex.Exec.GetExitCode())
 	}
-	if got := strings.TrimSpace(string(ex.Exec.Stdout)); got != "hello" {
+	if got := strings.TrimSpace(string(ex.Exec.GetStdout())); got != "hello" {
 		t.Errorf("stdout: got %q, want %q", got, "hello")
 	}
 }
@@ -102,15 +103,15 @@ func TestHandle_ExecNonZeroExit(t *testing.T) {
 			Command: "exit 1",
 		}},
 	})
-	if resp.Error != "" {
-		t.Fatalf("unexpected error: %s", resp.Error)
+	if resp.GetError() != "" {
+		t.Fatalf("unexpected error: %s", resp.GetError())
 	}
-	ex, ok := resp.Result.(*vmp.Response_Exec)
+	ex, ok := resp.GetResult().(*vmp.Response_Exec)
 	if !ok {
 		t.Fatal("expected ExecResponse")
 	}
-	if ex.Exec.ExitCode != 1 {
-		t.Errorf("exit_code: got %d, want 1", ex.Exec.ExitCode)
+	if ex.Exec.GetExitCode() != 1 {
+		t.Errorf("exit_code: got %d, want 1", ex.Exec.GetExitCode())
 	}
 }
 
@@ -124,18 +125,18 @@ func TestHandle_ExecTimeout(t *testing.T) {
 			TimeoutSeconds: 1,
 		}},
 	})
-	if resp.Error != "" {
-		t.Fatalf("unexpected error: %s", resp.Error)
+	if resp.GetError() != "" {
+		t.Fatalf("unexpected error: %s", resp.GetError())
 	}
-	ex, ok := resp.Result.(*vmp.Response_Exec)
+	ex, ok := resp.GetResult().(*vmp.Response_Exec)
 	if !ok {
 		t.Fatal("expected ExecResponse")
 	}
-	if !ex.Exec.TimedOut {
+	if !ex.Exec.GetTimedOut() {
 		t.Error("expected timed_out = true")
 	}
-	if ex.Exec.ExitCode != -1 {
-		t.Errorf("exit_code: got %d, want -1", ex.Exec.ExitCode)
+	if ex.Exec.GetExitCode() != -1 {
+		t.Errorf("exit_code: got %d, want -1", ex.Exec.GetExitCode())
 	}
 }
 
@@ -143,7 +144,7 @@ func TestHandle_UnknownCommand(t *testing.T) {
 	t.Parallel()
 
 	resp := sendAndReceive(t, &vmp.Request{Id: 6})
-	if resp.Error == "" {
+	if resp.GetError() == "" {
 		t.Error("expected error for nil command")
 	}
 }

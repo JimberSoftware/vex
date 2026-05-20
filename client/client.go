@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"sync/atomic"
@@ -50,8 +51,8 @@ func (c *Client) Ping() error {
 	if err != nil {
 		return err
 	}
-	if _, ok := resp.Result.(*vmp.Response_Ping); !ok {
-		return fmt.Errorf("unexpected response type")
+	if _, ok := resp.GetResult().(*vmp.Response_Ping); !ok {
+		return errors.New("unexpected response type")
 	}
 	return nil
 }
@@ -61,14 +62,14 @@ func (c *Client) HostInfo() (HostInfo, error) {
 	if err != nil {
 		return HostInfo{}, err
 	}
-	hi, ok := resp.Result.(*vmp.Response_HostInfo)
+	hi, ok := resp.GetResult().(*vmp.Response_HostInfo)
 	if !ok {
-		return HostInfo{}, fmt.Errorf("unexpected response type")
+		return HostInfo{}, errors.New("unexpected response type")
 	}
 	return HostInfo{
-		OS:      hi.HostInfo.Os,
-		Version: hi.HostInfo.Version,
-		Arch:    hi.HostInfo.Arch,
+		OS:      hi.HostInfo.GetOs(),
+		Version: hi.HostInfo.GetVersion(),
+		Arch:    hi.HostInfo.GetArch(),
 	}, nil
 }
 
@@ -80,15 +81,15 @@ func (c *Client) Exec(command string, timeoutSeconds uint32) (ExecResult, error)
 	if err != nil {
 		return ExecResult{}, err
 	}
-	ex, ok := resp.Result.(*vmp.Response_Exec)
+	ex, ok := resp.GetResult().(*vmp.Response_Exec)
 	if !ok {
-		return ExecResult{}, fmt.Errorf("unexpected response type")
+		return ExecResult{}, errors.New("unexpected response type")
 	}
 	return ExecResult{
-		Stdout:   ex.Exec.Stdout,
-		Stderr:   ex.Exec.Stderr,
-		ExitCode: ex.Exec.ExitCode,
-		TimedOut: ex.Exec.TimedOut,
+		Stdout:   ex.Exec.GetStdout(),
+		Stderr:   ex.Exec.GetStderr(),
+		ExitCode: ex.Exec.GetExitCode(),
+		TimedOut: ex.Exec.GetTimedOut(),
 	}, nil
 }
 
@@ -101,8 +102,8 @@ func (c *Client) send(req *vmp.Request) (*vmp.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.Error != "" {
-		return nil, fmt.Errorf("agent: %s", resp.Error)
+	if resp.GetError() != "" {
+		return nil, fmt.Errorf("agent: %s", resp.GetError())
 	}
 	return resp, nil
 }
