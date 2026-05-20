@@ -2,9 +2,10 @@ package agent
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"net"
+
+	"github.com/jimbersoftware/vex/internal/agent/commands"
 )
 
 func Run(ctx context.Context, ln net.Listener, log *slog.Logger) error {
@@ -17,16 +18,11 @@ func Run(ctx context.Context, ln net.Listener, log *slog.Logger) error {
 		conn, err := ln.Accept()
 		if err != nil {
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return nil //nolint:nilerr // listener closed due to graceful shutdown
 			}
 			return err
 		}
 		log.Info("connection accepted", "remote", conn.RemoteAddr())
-		go drain(conn)
+		go commands.Handle(ctx, conn)
 	}
-}
-
-func drain(conn net.Conn) {
-	defer conn.Close()
-	_, _ = io.Copy(io.Discard, conn)
 }
