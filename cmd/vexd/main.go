@@ -13,6 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	defaultVSOCKPort = 1024
+)
+
 func main() {
 	var (
 		listen string
@@ -56,7 +60,7 @@ func main() {
 	}
 
 	cmd.Flags().StringVar(&listen, "listen", ":8080", "HTTP listen address")
-	cmd.Flags().Uint32Var(&port, "port", 1024, "vsock port for agent connections") //nolint:mnd
+	cmd.Flags().Uint32Var(&port, "port", defaultVSOCKPort, "vsock port for agent connections")
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
