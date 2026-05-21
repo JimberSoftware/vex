@@ -25,12 +25,12 @@ func (s *Server) dial(w http.ResponseWriter, r *http.Request) (AgentClient, bool
 		writeError(w, http.StatusBadRequest, err.Error())
 		return nil, false
 	}
-	ac, err := s.Connector(cid, s.Port)
+	agent, err := s.Connector(cid, s.Port)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, fmt.Sprintf("connect to agent cid=%d: %s", cid, err))
 		return nil, false
 	}
-	return ac, true
+	return agent, true
 }
 
 func (s *Server) setWriteDeadline(w http.ResponseWriter, timeoutSeconds uint32) {
@@ -53,13 +53,13 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 }
 
 func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
-	ac, ok := s.dial(w, r)
+	agent, ok := s.dial(w, r)
 	if !ok {
 		return
 	}
-	defer ac.Close()
+	defer agent.Close()
 
-	if err := ac.Ping(); err != nil {
+	if err := agent.Ping(); err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}
@@ -67,13 +67,13 @@ func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleHostInfo(w http.ResponseWriter, r *http.Request) {
-	ac, ok := s.dial(w, r)
+	agent, ok := s.dial(w, r)
 	if !ok {
 		return
 	}
-	defer ac.Close()
+	defer agent.Close()
 
-	hi, err := ac.HostInfo()
+	hi, err := agent.HostInfo()
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
@@ -86,11 +86,11 @@ func (s *Server) handleHostInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
-	ac, ok := s.dial(w, r)
+	agent, ok := s.dial(w, r)
 	if !ok {
 		return
 	}
-	defer ac.Close()
+	defer agent.Close()
 
 	var req api.ExecRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -104,7 +104,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 
 	s.setWriteDeadline(w, req.TimeoutSeconds)
 
-	result, err := ac.Exec(req.Command, req.TimeoutSeconds)
+	result, err := agent.Exec(req.Command, req.TimeoutSeconds)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
