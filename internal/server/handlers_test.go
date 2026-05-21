@@ -1,8 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,10 +21,12 @@ type mockClient struct {
 	execErr     error
 }
 
-func (m *mockClient) Ping() error                                        { return m.pingErr }
-func (m *mockClient) HostInfo() (client.HostInfo, error)                 { return m.hostInfo, m.hostInfoErr }
-func (m *mockClient) Exec(_ string, _ uint32) (client.ExecResult, error) { return m.execResult, m.execErr }
-func (m *mockClient) Close() error                                       { return nil }
+func (m *mockClient) Ping() error                        { return m.pingErr }
+func (m *mockClient) HostInfo() (client.HostInfo, error) { return m.hostInfo, m.hostInfoErr }
+func (m *mockClient) Exec(_ string, _ uint32) (client.ExecResult, error) {
+	return m.execResult, m.execErr
+}
+func (m *mockClient) Close() error { return nil }
 
 func mockDialer(mc *mockClient) Dialer {
 	return func(_, _ uint32) (AgentClient, error) {
@@ -42,62 +45,66 @@ func newTestServer(d Dialer) *Server {
 }
 
 func TestHandlePing(t *testing.T) {
+	t.Parallel()
 	mc := &mockClient{}
 	srv := newTestServer(mockDialer(mc))
 
-	req := httptest.NewRequest(http.MethodPost, "/vms/3/ping", nil)
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/ping", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
-	if w.Body.String() != "{}\n" {
-		t.Fatalf("expected empty JSON object, got %q", w.Body.String())
+	if rec.Body.String() != "{}\n" {
+		t.Fatalf("expected empty JSON object, got %q", rec.Body.String())
 	}
 }
 
 func TestHandlePing_InvalidCID(t *testing.T) {
+	t.Parallel()
 	mc := &mockClient{}
 	srv := newTestServer(mockDialer(mc))
 
-	req := httptest.NewRequest(http.MethodPost, "/vms/notanumber/ping", nil)
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/notanumber/ping", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
 
 func TestHandlePing_DialFailure(t *testing.T) {
-	srv := &Server{Dialer: failDialer(fmt.Errorf("connection refused")), Port: 1024}
+	t.Parallel()
+	srv := &Server{Dialer: failDialer(errors.New("connection refused")), Port: 1024}
 
-	req := httptest.NewRequest(http.MethodPost, "/vms/3/ping", nil)
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/ping", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusBadGateway {
-		t.Fatalf("expected 502, got %d: %s", w.Code, w.Body.String())
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
 func TestHandleHostInfo(t *testing.T) {
+	t.Parallel()
 	mc := &mockClient{
 		hostInfo: client.HostInfo{OS: "linux", Version: "6.1.0", Arch: "x86_64"},
 	}
 	srv := newTestServer(mockDialer(mc))
 
-	req := httptest.NewRequest(http.MethodPost, "/vms/3/host-info", nil)
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/host-info", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	var resp map[string]string
-	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
 	if resp["os"] != "linux" || resp["version"] != "6.1.0" || resp["arch"] != "x86_64" {
@@ -106,6 +113,7 @@ func TestHandleHostInfo(t *testing.T) {
 }
 
 func TestHandleExec(t *testing.T) {
+	t.Parallel()
 	mc := &mockClient{
 		execResult: client.ExecResult{
 			Stdout:   []byte("hello\n"),
@@ -117,17 +125,17 @@ func TestHandleExec(t *testing.T) {
 	srv := newTestServer(mockDialer(mc))
 
 	body := strings.NewReader(`{"command":"echo hello","timeout_seconds":5}`)
-	req := httptest.NewRequest(http.MethodPost, "/vms/3/exec", body)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
 	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	var resp api.ExecResponse
-	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
 	if resp.Stdout != "hello\n" {
@@ -139,21 +147,23 @@ func TestHandleExec(t *testing.T) {
 }
 
 func TestHandleExec_MissingCommand(t *testing.T) {
+	t.Parallel()
 	mc := &mockClient{}
 	srv := newTestServer(mockDialer(mc))
 
 	body := strings.NewReader(`{}`)
-	req := httptest.NewRequest(http.MethodPost, "/vms/3/exec", body)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
 	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
 func TestHandleExec_TimedOut(t *testing.T) {
+	t.Parallel()
 	mc := &mockClient{
 		execResult: client.ExecResult{
 			Stdout:   []byte("partial"),
@@ -165,17 +175,17 @@ func TestHandleExec_TimedOut(t *testing.T) {
 	srv := newTestServer(mockDialer(mc))
 
 	body := strings.NewReader(`{"command":"sleep 999","timeout_seconds":1}`)
-	req := httptest.NewRequest(http.MethodPost, "/vms/3/exec", body)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
 	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	var resp api.ExecResponse
-	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
 	if !resp.TimedOut {
@@ -184,14 +194,15 @@ func TestHandleExec_TimedOut(t *testing.T) {
 }
 
 func TestHandleExec_DialFailure(t *testing.T) {
-	srv := &Server{Dialer: failDialer(fmt.Errorf("connection refused")), Port: 1024}
+	t.Parallel()
+	srv := &Server{Dialer: failDialer(errors.New("connection refused")), Port: 1024}
 
 	body := strings.NewReader(`{"command":"ls"}`)
-	req := httptest.NewRequest(http.MethodPost, "/vms/3/exec", body)
-	w := httptest.NewRecorder()
-	srv.Handler().ServeHTTP(w, req)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
 
-	if w.Code != http.StatusBadGateway {
-		t.Fatalf("expected 502, got %d: %s", w.Code, w.Body.String())
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

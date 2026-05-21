@@ -34,7 +34,7 @@ func main() {
 			httpSrv := &http.Server{
 				Addr:              listen,
 				Handler:           srv.Handler(),
-				ReadHeaderTimeout: 5 * time.Second,
+				ReadHeaderTimeout: 5 * time.Second, //nolint:mnd
 			}
 
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -42,9 +42,9 @@ func main() {
 
 			go func() {
 				<-ctx.Done()
-				shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
 				defer cancel()
-				httpSrv.Shutdown(shutdownCtx)
+				_ = httpSrv.Shutdown(shutdownCtx) //nolint:contextcheck
 			}()
 
 			log.Info("listening", "addr", listen, "vsock_port", port)
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	cmd.Flags().StringVar(&listen, "listen", ":8080", "HTTP listen address")
-	cmd.Flags().Uint32Var(&port, "port", 1024, "vsock port for agent connections")
+	cmd.Flags().Uint32Var(&port, "port", 1024, "vsock port for agent connections") //nolint:mnd
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)

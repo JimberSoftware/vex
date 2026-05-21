@@ -105,13 +105,20 @@ linters:
         - ctx
         - os
         - db
+        - w
+        - r
     ireturn:
       allow:
         - anon
         - ".*Handler"
+        - ".*Client"
         - error
         - empty
         - stdlib
+    tagliatelle:
+      case:
+        rules:
+          json: snake
 
 issues:
   fix: false

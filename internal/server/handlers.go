@@ -39,13 +39,13 @@ func (s *Server) setWriteDeadline(w http.ResponseWriter, timeoutSeconds uint32) 
 	}
 	rc := http.NewResponseController(w)
 	deadline := time.Now().Add(time.Duration(timeoutSeconds)*time.Second + 10*time.Second)
-	rc.SetWriteDeadline(deadline)
+	_ = rc.SetWriteDeadline(deadline)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v) //nolint:errchkjson
 }
 
 func writeError(w http.ResponseWriter, status int, msg string) {
