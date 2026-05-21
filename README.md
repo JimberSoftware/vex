@@ -2,9 +2,23 @@
 
 ## Install
 
-Download the latest binaries from the [GitHub Releases](https://github.com/JimberSoftware/vex/releases) page.
+### Quick install (Linux host)
 
-### Linux (host)
+Install or update `vex`, `vexd`, and the systemd service in one command:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/JimberSoftware/vex/main/scripts/install.sh | sudo bash
+```
+
+Pin a specific version:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/JimberSoftware/vex/main/scripts/install.sh | sudo bash -s -- -v v1.2.3
+```
+
+### Manual install
+
+Download binaries directly from the [GitHub Releases](https://github.com/JimberSoftware/vex/releases) page.
 
 ```bash
 # vex CLI client
