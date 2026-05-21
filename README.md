@@ -4,7 +4,7 @@
 
 ### Quick install (Linux host)
 
-Install or update `vex`, `vexd`, and the systemd service in one command:
+Install or update `vex` , `vexd` , and the systemd service in one command:
 
 ```bash
 curl -sSfL https://raw.githubusercontent.com/JimberSoftware/vex/main/scripts/install.sh | sudo bash
@@ -38,10 +38,10 @@ sudo mv vex-agent /usr/local/bin/
 
 Download the appropriate archive for your architecture:
 
-- **amd64**: [`vex-agent_windows_amd64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_amd64.zip)
-- **arm64**: [`vex-agent_windows_arm64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_arm64.zip)
+* **amd64**: [`vex-agent_windows_amd64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_amd64.zip)
+* **arm64**: [`vex-agent_windows_arm64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_arm64.zip)
 
-Extract and place `vex-agent.exe` somewhere on your `PATH`.
+Extract and place `vex-agent.exe` somewhere on your `PATH` .
 
 ### Verify
 
@@ -50,6 +50,35 @@ vex --version
 vex-agent --version
 vexd --version
 ```
+
+## Proxmox VE setup
+
+Proxmox VMs need a vsock device before vex can communicate with the guest agent.
+
+1. Stop the VM (or template).
+2. SSH into the Proxmox node and edit the VM config:
+
+```bash
+nano /etc/pve/qemu-server/<VMID>.conf
+```
+
+3. Add the following line:
+
+```
+args: -device vhost-vsock-pci,guest-cid=<CID>
+```
+
+Replace `<CID>` with a unique number ≥ 3 for each VM (e.g. use `VMID` ).
+
+4. Start the VM.
+
+If the VM already has an `args:` line, append the vsock device to it:
+
+```
+args: <existing args> -device vhost-vsock-pci,guest-cid=<CID>
+```
+
+VMs cloned from a template inherit the vsock device, but each clone must have a unique CID so make sure to update the `args:` line for each clone.
 
 ## vex-agent
 
@@ -69,8 +98,8 @@ vex-agent [--cid <uint32>] [--port <uint32>]
 
 | Flag     | Default      | Description                                                          |
 | -------- | ------------ | -------------------------------------------------------------------- |
-| `--port` | `1024`       | vsocket port to listen on                                            |
-| `--cid`  | `4294967295` | Context ID to bind (`4294967295` = `VMADDR_CID_ANY`, binds all CIDs) |
+| `--port` | `1024` | vsocket port to listen on                                            |
+| `--cid` | `4294967295` | Context ID to bind ( `4294967295` = `VMADDR_CID_ANY` , binds all CIDs) |
 
 ### Local loopback testing (Linux)
 
@@ -85,4 +114,4 @@ In a second terminal:
 socat - VSOCK-CONNECT:1:1024
 ```
 
-Shut down with `Ctrl+C`.
+Shut down with `Ctrl+C` .
