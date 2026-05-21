@@ -166,8 +166,8 @@ func (c *vsockConn) Close() error {
 	return nil
 }
 
-func (c *vsockConn) LocalAddr() net.Addr              { return &c.local }
-func (c *vsockConn) RemoteAddr() net.Addr             { return &c.remote }
+func (c *vsockConn) LocalAddr() net.Addr                { return &c.local }
+func (c *vsockConn) RemoteAddr() net.Addr               { return &c.remote }
 func (c *vsockConn) SetDeadline(_ time.Time) error      { return nil }
 func (c *vsockConn) SetReadDeadline(_ time.Time) error  { return nil }
 func (c *vsockConn) SetWriteDeadline(_ time.Time) error { return nil }
