@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/jimbersoftware/vex/internal/agent"
+	"github.com/jimbersoftware/vex/internal/version"
 	"github.com/jimbersoftware/vex/internal/vsock"
 	"github.com/spf13/cobra"
 )
@@ -24,8 +25,9 @@ func main() {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "vex-agent",
-		Short: "Guest-side vex agent",
+		Use:     "vex-agent",
+		Short:   "Guest-side vex agent",
+		Version: version.Version,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			log := slog.Default()
 

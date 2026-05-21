@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jimbersoftware/vex/internal/server"
+	"github.com/jimbersoftware/vex/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -24,8 +25,9 @@ func main() {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "vexd",
-		Short: "HTTP daemon for remote vex-agent access",
+		Use:     "vexd",
+		Short:   "HTTP daemon for remote vex-agent access",
+		Version: version.Version,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			log := slog.Default()
 
