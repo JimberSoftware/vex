@@ -1,0 +1,81 @@
+version: 2
+
+builds:
+  - id: vex
+    main: ./cmd/vex/
+    binary: vex
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/jimbersoftware/vex/internal/version.Version={{.Version}}
+
+  - id: vex-agent
+    main: ./cmd/vex-agent/
+    binary: vex-agent
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: linux
+        goarch: arm64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/jimbersoftware/vex/internal/version.Version={{.Version}}
+
+  - id: vexd
+    main: ./cmd/vexd/
+    binary: vexd
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/jimbersoftware/vex/internal/version.Version={{.Version}}
+
+archives:
+  - id: vex
+    ids:
+      - vex
+    name_template: "vex_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+
+  - id: vex-agent
+    ids:
+      - vex-agent
+    name_template: "vex-agent_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+  - id: vexd
+    ids:
+      - vexd
+    name_template: "vexd_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc

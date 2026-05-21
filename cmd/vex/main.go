@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/jimbersoftware/vex/client"
+	"github.com/jimbersoftware/vex/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -16,8 +17,9 @@ func main() {
 	var port uint32
 
 	root := &cobra.Command{
-		Use:   "vex",
-		Short: "vex client — send VMP commands to vex-agent",
+		Use:     "vex",
+		Short:   "vex client — send VMP commands to vex-agent",
+		Version: version.Version,
 	}
 	root.PersistentFlags().Uint32Var(&cid, "cid", 1, "vsocket context ID")
 	root.PersistentFlags().Uint32Var(&port, "port", defaultPort, "vsocket port")
