@@ -2,7 +2,7 @@
   <img src="image.png" alt="Kwebbel" width="400"/>
 </div>
 
-Vex is a lightweight host-to-guest VM communication tool over [vsock](https://man7.org/linux/man-pages/man7/vsock.7.html). It provides a CLI ( `vex` ), an HTTP daemon ( `vexd` ), and a cross-platform guest agent ( `vex-agent` ) for reliable command execution inside VMs — no QEMU Guest Agent required.
+Vex is a lightweight host-to-guest VM communication tool over [vsock](https://man7.org/linux/man-pages/man7/vsock.7.html). It provides a CLI ( `vex` ), an HTTP daemon ( `vexd` ), and a cross-platform guest agent ( `vex-agent` ) for reliable command execution inside VMs
 
 <details>
 <summary><strong>Why Vex?</strong></summary>
