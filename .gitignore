@@ -2,3 +2,4 @@ docs/superpowers
 .vscode
 /vex-agent
 *.exe
+dist/
