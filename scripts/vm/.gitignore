@@ -1,0 +1,7 @@
+# VM disk images and ISOs — too large for git
+*.iso
+*.img
+*.qcow2
+
+# Runtime state
+*.sock
