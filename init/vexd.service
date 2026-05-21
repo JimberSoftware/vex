@@ -1,0 +1,12 @@
+[Unit]
+Description=vexd hypervisor daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/vexd --listen 127.0.0.1:8080
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
