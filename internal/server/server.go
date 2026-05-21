@@ -15,16 +15,16 @@ type AgentClient interface {
 	Close() error
 }
 
-type Dialer func(cid, port uint32) (AgentClient, error)
+type AgentConnector func(cid, port uint32) (AgentClient, error)
 
-func DefaultDialer(cid, port uint32) (AgentClient, error) {
+func DefaultAgentConnector(cid, port uint32) (AgentClient, error) {
 	return client.New(cid, port)
 }
 
 type Server struct {
-	Dialer Dialer
-	Port   uint32
-	Log    *slog.Logger
+	Connector AgentConnector
+	Port      uint32
+	Log       *slog.Logger
 }
 
 func (s *Server) Handler() http.Handler {

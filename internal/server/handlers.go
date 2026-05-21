@@ -25,7 +25,7 @@ func (s *Server) dial(w http.ResponseWriter, r *http.Request) (AgentClient, bool
 		writeError(w, http.StatusBadRequest, err.Error())
 		return nil, false
 	}
-	ac, err := s.Dialer(cid, s.Port)
+	ac, err := s.Connector(cid, s.Port)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, fmt.Sprintf("connect to agent cid=%d: %s", cid, err))
 		return nil, false

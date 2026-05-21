@@ -26,9 +26,9 @@ func main() {
 			log := slog.Default()
 
 			srv := &server.Server{
-				Dialer: server.DefaultDialer,
-				Port:   port,
-				Log:    log,
+				Connector: server.DefaultAgentConnector,
+				Port:      port,
+				Log:       log,
 			}
 
 			httpSrv := &http.Server{

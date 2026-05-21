@@ -28,26 +28,26 @@ func (m *mockClient) Exec(_ string, _ uint32) (client.ExecResult, error) {
 }
 func (m *mockClient) Close() error { return nil }
 
-func mockDialer(mc *mockClient) Dialer {
+func mockConnector(mc *mockClient) AgentConnector {
 	return func(_, _ uint32) (AgentClient, error) {
 		return mc, nil
 	}
 }
 
-func failDialer(err error) Dialer {
+func failConnector(err error) AgentConnector {
 	return func(_, _ uint32) (AgentClient, error) {
 		return nil, err
 	}
 }
 
-func newTestServer(d Dialer) *Server {
-	return &Server{Dialer: d, Port: 1024}
+func newTestServer(c AgentConnector) *Server {
+	return &Server{Connector: c, Port: 1024}
 }
 
 func TestHandlePing(t *testing.T) {
 	t.Parallel()
 	mc := &mockClient{}
-	srv := newTestServer(mockDialer(mc))
+	srv := newTestServer(mockConnector(mc))
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/ping", nil)
 	rec := httptest.NewRecorder()
@@ -64,7 +64,7 @@ func TestHandlePing(t *testing.T) {
 func TestHandlePing_InvalidCID(t *testing.T) {
 	t.Parallel()
 	mc := &mockClient{}
-	srv := newTestServer(mockDialer(mc))
+	srv := newTestServer(mockConnector(mc))
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/notanumber/ping", nil)
 	rec := httptest.NewRecorder()
@@ -77,7 +77,7 @@ func TestHandlePing_InvalidCID(t *testing.T) {
 
 func TestHandlePing_DialFailure(t *testing.T) {
 	t.Parallel()
-	srv := &Server{Dialer: failDialer(errors.New("connection refused")), Port: 1024}
+	srv := &Server{Connector: failConnector(errors.New("connection refused")), Port: 1024}
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/ping", nil)
 	rec := httptest.NewRecorder()
@@ -93,7 +93,7 @@ func TestHandleHostInfo(t *testing.T) {
 	mc := &mockClient{
 		hostInfo: client.HostInfo{OS: "linux", Version: "6.1.0", Arch: "x86_64"},
 	}
-	srv := newTestServer(mockDialer(mc))
+	srv := newTestServer(mockConnector(mc))
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/host-info", nil)
 	rec := httptest.NewRecorder()
@@ -122,7 +122,7 @@ func TestHandleExec(t *testing.T) {
 			TimedOut: false,
 		},
 	}
-	srv := newTestServer(mockDialer(mc))
+	srv := newTestServer(mockConnector(mc))
 
 	body := strings.NewReader(`{"command":"echo hello","timeout_seconds":5}`)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
@@ -149,7 +149,7 @@ func TestHandleExec(t *testing.T) {
 func TestHandleExec_MissingCommand(t *testing.T) {
 	t.Parallel()
 	mc := &mockClient{}
-	srv := newTestServer(mockDialer(mc))
+	srv := newTestServer(mockConnector(mc))
 
 	body := strings.NewReader(`{}`)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
@@ -172,7 +172,7 @@ func TestHandleExec_TimedOut(t *testing.T) {
 			TimedOut: true,
 		},
 	}
-	srv := newTestServer(mockDialer(mc))
+	srv := newTestServer(mockConnector(mc))
 
 	body := strings.NewReader(`{"command":"sleep 999","timeout_seconds":1}`)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
@@ -195,7 +195,7 @@ func TestHandleExec_TimedOut(t *testing.T) {
 
 func TestHandleExec_DialFailure(t *testing.T) {
 	t.Parallel()
-	srv := &Server{Dialer: failDialer(errors.New("connection refused")), Port: 1024}
+	srv := &Server{Connector: failConnector(errors.New("connection refused")), Port: 1024}
 
 	body := strings.NewReader(`{"command":"ls"}`)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
