@@ -7,7 +7,7 @@
 !define PRODUCT_NAME "Vex Agent"
 !define PRODUCT_PUBLISHER "Jimber Software"
 !define SERVICE_NAME "VexAgent"
-!define INSTALL_DIR "$PROGRAMFILES\Vex"
+!define INSTALL_DIR "$PROGRAMFILES64\Vex"
 !define UNINSTALL_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${SERVICE_NAME}"
 
 !ifndef VERSION
