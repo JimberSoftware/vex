@@ -4,8 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/jimbersoftware/vex/internal/agent"
 	"github.com/jimbersoftware/vex/internal/version"
@@ -18,29 +16,30 @@ const (
 	defaultCID  uint32 = ^uint32(0) // VMADDR_CID_ANY
 )
 
-func main() {
-	var (
-		port uint32
-		cid  uint32
-	)
+var (
+	port uint32
+	cid  uint32
+)
 
+func run(ctx context.Context) error {
+	log := slog.Default()
+
+	ln, err := vsock.Listen(cid, port)
+	if err != nil {
+		return err
+	}
+	log.Info("listening", "cid", cid, "port", port)
+
+	return agent.Run(ctx, ln, log)
+}
+
+func main() {
 	cmd := &cobra.Command{
 		Use:     "vex-agent",
 		Short:   "Guest-side vex agent",
 		Version: version.Version,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			log := slog.Default()
-
-			ln, err := vsock.Listen(cid, port)
-			if err != nil {
-				return err
-			}
-			log.Info("listening", "cid", cid, "port", port)
-
-			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-			defer stop()
-
-			return agent.Run(ctx, ln, log)
+			return runApp()
 		},
 	}
 
