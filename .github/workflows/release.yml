@@ -21,9 +21,24 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install NSIS
+        run: sudo apt-get update && sudo apt-get install -y nsis
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
           args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Windows installer
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          AGENT_EXE=$(find dist -path "*/vex-agent_windows_amd64*/vex-agent.exe" | head -1)
+          cp "$AGENT_EXE" dist/vex-agent.exe
+          makensis -DVERSION="$VERSION" -DBIN_PATH=../../dist/vex-agent.exe scripts/installer/vex-agent.nsi
+
+      - name: Upload installer to release
+        run: gh release upload "${GITHUB_REF_NAME}" dist/vex-agent-installer.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
