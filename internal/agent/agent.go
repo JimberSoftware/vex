@@ -23,6 +23,6 @@ func Run(ctx context.Context, ln net.Listener, log *slog.Logger) error {
 			return err
 		}
 		log.Info("connection accepted", "remote", conn.RemoteAddr())
-		go commands.Handle(ctx, conn)
+		go commands.Handle(ctx, conn, log)
 	}
 }
