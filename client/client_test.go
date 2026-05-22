@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 func agentClient(t *testing.T) (*client.Client, func()) {
 	t.Helper()
 	server, conn := net.Pipe()
-	go commands.Handle(context.Background(), server)
+	go commands.Handle(context.Background(), server, slog.Default())
 	c := client.NewFromConn(conn)
 	return c, func() { c.Close() }
 }

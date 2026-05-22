@@ -3,6 +3,7 @@ package commands_test
 import (
 	"bufio"
 	"context"
+	"log/slog"
 	"net"
 	"strings"
 	"testing"
@@ -17,7 +18,7 @@ func sendAndReceive(t *testing.T, req *vmp.Request) *vmp.Response {
 	server, client := net.Pipe()
 	defer client.Close()
 
-	go commands.Handle(context.Background(), server)
+	go commands.Handle(context.Background(), server, slog.New(slog.DiscardHandler))
 
 	if err := vmp.WriteRequest(client, req); err != nil {
 		t.Fatalf("WriteRequest: %v", err)
