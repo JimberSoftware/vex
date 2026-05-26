@@ -252,7 +252,7 @@ func TestExec_DefaultTimeoutExpires(t *testing.T) {
 		cl := vexclient.New("http://localhost", vexclient.WithHTTPClient(&http.Client{Transport: transport}))
 
 		_, err := cl.Exec(t.Context(), 3, api.ExecRequest{
-			Command: "echo",
+			Command: "date",
 		})
 		if err == nil {
 			t.Fatal("expected timeout: default 30s deadline should expire before 35s response")
@@ -278,7 +278,7 @@ func TestExec_CustomTimeoutDoesNotExpireEarly(t *testing.T) {
 		cl := vexclient.New("http://localhost", vexclient.WithHTTPClient(&http.Client{Transport: transport}))
 
 		_, err := cl.Exec(t.Context(), 3, api.ExecRequest{
-			Command:        "echo",
+			Command:        "date",
 			TimeoutSeconds: 35,
 		})
 		if err != nil {
