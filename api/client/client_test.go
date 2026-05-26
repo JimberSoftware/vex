@@ -3,9 +3,13 @@ package client_test
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"testing/synctest"
+	"time"
 
 	"github.com/jimbersoftware/vex/api"
 	vexclient "github.com/jimbersoftware/vex/api/client"
@@ -228,6 +232,65 @@ func TestNetworkError(t *testing.T) {
 	if ok {
 		t.Error("network errors should not be APIError")
 	}
+}
+
+func TestExec_DefaultTimeoutExpires(t *testing.T) {
+	t.Parallel()
+	synctest.Test(t, func(t *testing.T) {
+		transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			select {
+			case <-time.After(35 * time.Second):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Type": []string{"application/json"}},
+					Body:       io.NopCloser(strings.NewReader(`{"exit_code":0}`)),
+				}, nil
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			}
+		})
+		cl := vexclient.New("http://localhost", vexclient.WithHTTPClient(&http.Client{Transport: transport}))
+
+		_, err := cl.Exec(t.Context(), 3, api.ExecRequest{
+			Command: "echo",
+		})
+		if err == nil {
+			t.Fatal("expected timeout: default 30s deadline should expire before 35s response")
+		}
+	})
+}
+
+func TestExec_CustomTimeoutDoesNotExpireEarly(t *testing.T) {
+	t.Parallel()
+	synctest.Test(t, func(t *testing.T) {
+		transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			select {
+			case <-time.After(35 * time.Second):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{"Content-Type": []string{"application/json"}},
+					Body:       io.NopCloser(strings.NewReader(`{"exit_code":0}`)),
+				}, nil
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			}
+		})
+		cl := vexclient.New("http://localhost", vexclient.WithHTTPClient(&http.Client{Transport: transport}))
+
+		_, err := cl.Exec(t.Context(), 3, api.ExecRequest{
+			Command:        "echo",
+			TimeoutSeconds: 35,
+		})
+		if err != nil {
+			t.Fatalf("custom timeout (35s) should not have timed out: %v", err)
+		}
+	})
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func TestContextCancellation(t *testing.T) {
