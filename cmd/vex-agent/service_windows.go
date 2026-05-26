@@ -5,9 +5,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os/signal"
 	"syscall"
 
+	"github.com/jimbersoftware/vex/internal/winlog"
 	"golang.org/x/sys/windows/svc"
 )
 
@@ -62,6 +64,15 @@ func runApp() error {
 	}
 
 	if isService {
+		winlog.EnsureSource(serviceName)
+
+		h, err := winlog.NewHandler(serviceName, slog.LevelInfo)
+		if err != nil {
+			return fmt.Errorf("opening event log: %w", err)
+		}
+		defer h.Close()
+		slog.SetDefault(slog.New(h))
+
 		return svc.Run(serviceName, &agentService{})
 	}
 
