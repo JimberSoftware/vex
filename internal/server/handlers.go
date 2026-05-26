@@ -104,7 +104,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 
 	s.setWriteDeadline(w, req.TimeoutSeconds)
 
-	result, err := agent.Exec(req.Command, req.TimeoutSeconds)
+	result, err := agent.Exec(req.Command, req.Arguments, req.TimeoutSeconds)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return

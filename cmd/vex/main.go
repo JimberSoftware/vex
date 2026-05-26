@@ -82,7 +82,7 @@ func hostInfoCmd(cid, port *uint32) *cobra.Command {
 func execCmd(cid, port *uint32) *cobra.Command {
 	var timeout uint32
 	cmd := &cobra.Command{
-		Use:   "exec <command>",
+		Use:   "exec <command> [args...]",
 		Short: "Execute a command on the agent host",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -91,7 +91,7 @@ func execCmd(cid, port *uint32) *cobra.Command {
 				return err
 			}
 			defer c.Close()
-			ex, err := c.Exec(args[0], timeout)
+			ex, err := c.Exec(args[0], args[1:], timeout)
 			if err != nil {
 				return err
 			}

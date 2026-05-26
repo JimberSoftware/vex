@@ -73,9 +73,10 @@ func (c *Client) HostInfo() (HostInfo, error) {
 	}, nil
 }
 
-func (c *Client) Exec(command string, timeoutSeconds uint32) (ExecResult, error) {
+func (c *Client) Exec(command string, args []string, timeoutSeconds uint32) (ExecResult, error) {
 	resp, err := c.send(&vmp.Request{Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
 		Command:        command,
+		Arguments:      args,
 		TimeoutSeconds: timeoutSeconds,
 	}}})
 	if err != nil {

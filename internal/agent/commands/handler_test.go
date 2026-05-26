@@ -77,7 +77,8 @@ func TestHandle_Exec(t *testing.T) {
 	resp := sendAndReceive(t, &vmp.Request{
 		Id: 3,
 		Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
-			Command: "echo hello",
+			Command:   "echo",
+			Arguments: []string{"hello"},
 		}},
 	})
 	if resp.GetError() != "" {
@@ -101,7 +102,8 @@ func TestHandle_ExecNonZeroExit(t *testing.T) {
 	resp := sendAndReceive(t, &vmp.Request{
 		Id: 4,
 		Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
-			Command: "exit 1",
+			Command:   "/bin/bash",
+			Arguments: []string{"-c", "exit 1"},
 		}},
 	})
 	if resp.GetError() != "" {
@@ -122,7 +124,8 @@ func TestHandle_ExecTimeout(t *testing.T) {
 	resp := sendAndReceive(t, &vmp.Request{
 		Id: 5,
 		Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
-			Command:        "sleep 10",
+			Command:        "sleep",
+			Arguments:      []string{"10"},
 			TimeoutSeconds: 1,
 		}},
 	})

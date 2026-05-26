@@ -91,8 +91,11 @@ func TestExec_Success(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		if req.Command != "echo hello" {
+		if req.Command != "echo" {
 			t.Errorf("unexpected command: %q", req.Command)
+		}
+		if len(req.Arguments) != 1 || req.Arguments[0] != "hello" {
+			t.Errorf("unexpected arguments: %v", req.Arguments)
 		}
 		if req.TimeoutSeconds != 5 {
 			t.Errorf("unexpected timeout: %d", req.TimeoutSeconds)
@@ -109,7 +112,8 @@ func TestExec_Success(t *testing.T) {
 
 	cl := vexclient.New(srv.URL)
 	result, err := cl.Exec(context.Background(), 3, api.ExecRequest{
-		Command:        "echo hello",
+		Command:        "echo",
+		Arguments:      []string{"hello"},
 		TimeoutSeconds: 5,
 	})
 	if err != nil {
@@ -138,7 +142,8 @@ func TestExec_TimedOut(t *testing.T) {
 
 	cl := vexclient.New(srv.URL)
 	result, err := cl.Exec(context.Background(), 3, api.ExecRequest{
-		Command:        "sleep 999",
+		Command:        "sleep",
+		Arguments:      []string{"999"},
 		TimeoutSeconds: 1,
 	})
 	if err != nil {

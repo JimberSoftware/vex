@@ -2,8 +2,9 @@
 package api
 
 type ExecRequest struct {
-	Command        string `json:"command"`
-	TimeoutSeconds uint32 `json:"timeout_seconds,omitempty"`
+	Command        string   `json:"command"`
+	Arguments      []string `json:"arguments,omitempty"`
+	TimeoutSeconds uint32   `json:"timeout_seconds,omitempty"`
 }
 
 type ExecResponse struct {

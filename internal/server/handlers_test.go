@@ -23,7 +23,7 @@ type mockClient struct {
 
 func (m *mockClient) Ping() error                        { return m.pingErr }
 func (m *mockClient) HostInfo() (client.HostInfo, error) { return m.hostInfo, m.hostInfoErr }
-func (m *mockClient) Exec(_ string, _ uint32) (client.ExecResult, error) {
+func (m *mockClient) Exec(_ string, _ []string, _ uint32) (client.ExecResult, error) {
 	return m.execResult, m.execErr
 }
 func (m *mockClient) Close() error { return nil }
@@ -124,7 +124,7 @@ func TestHandleExec(t *testing.T) {
 	}
 	srv := newTestServer(mockConnector(mc))
 
-	body := strings.NewReader(`{"command":"echo hello","timeout_seconds":5}`)
+	body := strings.NewReader(`{"command":"echo","arguments":["hello"],"timeout_seconds":5}`)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -174,7 +174,7 @@ func TestHandleExec_TimedOut(t *testing.T) {
 	}
 	srv := newTestServer(mockConnector(mc))
 
-	body := strings.NewReader(`{"command":"sleep 999","timeout_seconds":1}`)
+	body := strings.NewReader(`{"command":"sleep","arguments":["999"],"timeout_seconds":1}`)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
