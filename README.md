@@ -53,8 +53,8 @@ sudo mv vex-agent /usr/local/bin/
 
 Download the appropriate archive for your architecture:
 
-* **amd64**: [`vex-agent_windows_amd64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_amd64.zip)
-* **arm64**: [`vex-agent_windows_arm64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_arm64.zip)
+- **amd64**: [`vex-agent_windows_amd64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_amd64.zip)
+- **arm64**: [`vex-agent_windows_arm64.zip`](https://github.com/JimberSoftware/vex/releases/latest/download/vex-agent_windows_arm64.zip)
 
 Extract and place `vex-agent.exe` somewhere on your `PATH` .
 
@@ -97,7 +97,7 @@ VMs cloned from a template inherit the vsock device, but each clone must have a 
 
 ## vex-agent
 
-Guest-side agent that listens for incoming vsocket connections.
+Guest-side agent that listens for incoming vsock connections.
 
 ### Build
 
@@ -111,10 +111,10 @@ go build ./cmd/vex-agent/
 vex-agent [--cid <uint32>] [--port <uint32>]
 ```
 
-| Flag     | Default      | Description                                                          |
-| -------- | ------------ | -------------------------------------------------------------------- |
-| `--port` | `1024` | vsocket port to listen on                                            |
-| `--cid` | `4294967295` | Context ID to bind ( `4294967295` = `VMADDR_CID_ANY` , binds all CIDs) |
+| Flag     | Default      | Description                                                            |
+| -------- | ------------ | ---------------------------------------------------------------------- |
+| `--port` | `1024`       | vsock port to listen on                                                |
+| `--cid`  | `4294967295` | Context ID to bind ( `4294967295` = `VMADDR_CID_ANY` , binds all CIDs) |
 
 ### Local loopback testing (Linux)
 

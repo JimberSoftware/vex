@@ -21,8 +21,8 @@ func main() {
 		Short:   "vex client — send VMP commands to vex-agent",
 		Version: version.Version,
 	}
-	root.PersistentFlags().Uint32Var(&cid, "cid", 1, "vsocket context ID")
-	root.PersistentFlags().Uint32Var(&port, "port", defaultPort, "vsocket port")
+	root.PersistentFlags().Uint32Var(&cid, "cid", 1, "vsock context ID")
+	root.PersistentFlags().Uint32Var(&port, "port", defaultPort, "vsock port")
 
 	root.AddCommand(
 		pingCmd(&cid, &port),

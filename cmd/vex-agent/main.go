@@ -43,8 +43,8 @@ func main() {
 		},
 	}
 
-	cmd.Flags().Uint32Var(&port, "port", defaultPort, "vsocket port to listen on")
-	cmd.Flags().Uint32Var(&cid, "cid", defaultCID, "vsocket context ID to bind (default: VMADDR_CID_ANY)")
+	cmd.Flags().Uint32Var(&port, "port", defaultPort, "vsock port to listen on")
+	cmd.Flags().Uint32Var(&cid, "cid", defaultCID, "vsock context ID to bind (default: VMADDR_CID_ANY)")
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
