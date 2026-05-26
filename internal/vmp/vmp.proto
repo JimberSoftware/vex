@@ -1,9 +1,11 @@
 syntax = "proto3";
 package vmp;
+
 option go_package = "github.com/jimbersoftware/vex/internal/vmp";
 
 message Request {
   uint64 id = 1;
+
   oneof command {
     PingRequest     ping      = 2;
     HostInfoRequest host_info = 3;
@@ -14,6 +16,7 @@ message Request {
 message Response {
   uint64 id    = 1;
   string error = 2;
+
   oneof result {
     PingResponse     ping      = 3;
     HostInfoResponse host_info = 4;
@@ -21,7 +24,7 @@ message Response {
   }
 }
 
-message PingRequest  {}
+message PingRequest {}
 message PingResponse {}
 
 message HostInfoRequest {}
@@ -32,10 +35,10 @@ message HostInfoResponse {
 }
 
 message ExecRequest {
-  string command         = 1;
-  uint32 timeout_seconds = 2;
+  string          command         = 1;
+  uint32          timeout_seconds = 2;
+  repeated string arguments       = 3;
 }
-
 message ExecResponse {
   int32 exit_code = 1;
   bytes stdout    = 2;

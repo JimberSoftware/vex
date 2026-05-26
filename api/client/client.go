@@ -25,7 +25,7 @@ type Client struct {
 func New(baseURL string, opts ...Option) *Client {
 	cl := &Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
-		httpClient: &http.Client{Timeout: defaultTimeout},
+		httpClient: &http.Client{},
 		headers:    make(map[string]string),
 	}
 	for _, opt := range opts {
@@ -83,13 +83,15 @@ func (cl *Client) vmPath(cid uint32, endpoint string) string {
 }
 
 func (cl *Client) do(ctx context.Context, method, url string, body any) (*http.Response, error) {
-	var bodyReader io.Reader
-	if body != nil {
-		buf, err := json.Marshal(body)
-		if err != nil {
-			return nil, fmt.Errorf("marshal request body: %w", err)
-		}
-		bodyReader = bytes.NewReader(buf)
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, defaultTimeout)
+		defer cancel()
+	}
+
+	bodyReader, err := encodeBody(body)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
@@ -122,4 +124,15 @@ func (cl *Client) do(ctx context.Context, method, url string, body any) (*http.R
 	}
 
 	return resp, nil
+}
+
+func encodeBody(body any) (io.Reader, error) {
+	if body == nil {
+		return http.NoBody, nil
+	}
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request body: %w", err)
+	}
+	return bytes.NewReader(buf), nil
 }

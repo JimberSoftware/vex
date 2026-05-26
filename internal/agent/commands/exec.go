@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"os/exec"
-	"runtime"
 	"time"
 
 	"github.com/jimbersoftware/vex/internal/vmp"
@@ -24,12 +23,7 @@ func execCommand(ctx context.Context, log *slog.Logger, req *vmp.ExecRequest) *v
 		defer cancel()
 	}
 
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-Command", req.GetCommand()) //nolint:gosec
-	} else {
-		cmd = exec.CommandContext(ctx, "/bin/bash", "-c", req.GetCommand()) //nolint:gosec
-	}
+	cmd := exec.CommandContext(ctx, req.GetCommand(), req.GetArguments()...) //nolint:gosec
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

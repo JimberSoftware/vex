@@ -7,12 +7,11 @@
 package vmp
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -414,6 +413,7 @@ type ExecRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Command        string                 `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`
 	TimeoutSeconds uint32                 `protobuf:"varint,2,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	Arguments      []string               `protobuf:"bytes,3,rep,name=arguments,proto3" json:"arguments,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -460,6 +460,13 @@ func (x *ExecRequest) GetTimeoutSeconds() uint32 {
 		return x.TimeoutSeconds
 	}
 	return 0
+}
+
+func (x *ExecRequest) GetArguments() []string {
+	if x != nil {
+		return x.Arguments
+	}
+	return nil
 }
 
 type ExecResponse struct {
@@ -554,10 +561,11 @@ const file_vmp_proto_rawDesc = "" +
 	"\x10HostInfoResponse\x12\x0e\n" +
 	"\x02os\x18\x01 \x01(\tR\x02os\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12\x12\n" +
-	"\x04arch\x18\x03 \x01(\tR\x04arch\"P\n" +
+	"\x04arch\x18\x03 \x01(\tR\x04arch\"n\n" +
 	"\vExecRequest\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12'\n" +
-	"\x0ftimeout_seconds\x18\x02 \x01(\rR\x0etimeoutSeconds\"x\n" +
+	"\x0ftimeout_seconds\x18\x02 \x01(\rR\x0etimeoutSeconds\x12\x1c\n" +
+	"\targuments\x18\x03 \x03(\tR\targuments\"x\n" +
 	"\fExecResponse\x12\x1b\n" +
 	"\texit_code\x18\x01 \x01(\x05R\bexitCode\x12\x16\n" +
 	"\x06stdout\x18\x02 \x01(\fR\x06stdout\x12\x16\n" +
