@@ -51,8 +51,12 @@ func execCommand(ctx context.Context, log *slog.Logger, req *vmp.ExecRequest) *v
 	}
 	var exitErr *exec.ExitError
 	if !errors.As(runErr, &exitErr) {
+		execResp.ExitCode = killedExitCode
 		log.Error("exec command failed", "command", req.GetCommand(), "duration", elapsed, "error", runErr)
-		return &vmp.Response{Error: runErr.Error()}
+		return &vmp.Response{
+			Error:  runErr.Error(),
+			Result: &vmp.Response_Exec{Exec: execResp},
+		}
 	}
 	execResp.ExitCode = int32(exitErr.ExitCode()) //nolint:gosec // exit codes fit in int32
 	log.Info("exec command completed", "command", req.GetCommand(), "duration", elapsed, "exitCode", execResp.GetExitCode())

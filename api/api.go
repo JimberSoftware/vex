@@ -12,6 +12,7 @@ type ExecResponse struct {
 	Stderr   string `json:"stderr"`
 	ExitCode int32  `json:"exit_code"`
 	TimedOut bool   `json:"timed_out"`
+	Error    string `json:"error,omitempty"`
 }
 
 type HostInfoResponse struct {

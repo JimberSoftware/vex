@@ -106,7 +106,14 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 
 	result, err := agent.Exec(req.Command, req.Arguments, req.TimeoutSeconds)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err.Error())
+		// todo: distinguish between agent error and command execution error
+		writeJSON(w, http.StatusOK, api.ExecResponse{
+			Stdout:   string(result.Stdout),
+			Stderr:   string(result.Stderr),
+			ExitCode: result.ExitCode,
+			TimedOut: result.TimedOut,
+			Error:    err.Error(),
+		})
 		return
 	}
 

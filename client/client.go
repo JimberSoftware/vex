@@ -79,11 +79,14 @@ func (c *Client) Exec(command string, args []string, timeoutSeconds uint32) (Exe
 		Arguments:      args,
 		TimeoutSeconds: timeoutSeconds,
 	}}})
-	if err != nil {
+	if resp == nil {
 		return ExecResult{}, err
 	}
 	ex, ok := resp.GetResult().(*vmp.Response_Exec)
 	if !ok {
+		if err != nil {
+			return ExecResult{}, err
+		}
 		return ExecResult{}, errors.New("unexpected response type")
 	}
 	return ExecResult{
@@ -91,7 +94,7 @@ func (c *Client) Exec(command string, args []string, timeoutSeconds uint32) (Exe
 		Stderr:   ex.Exec.GetStderr(),
 		ExitCode: ex.Exec.GetExitCode(),
 		TimedOut: ex.Exec.GetTimedOut(),
-	}, nil
+	}, err
 }
 
 func (c *Client) send(req *vmp.Request) (*vmp.Response, error) {
@@ -104,7 +107,7 @@ func (c *Client) send(req *vmp.Request) (*vmp.Response, error) {
 		return nil, err
 	}
 	if resp.GetError() != "" {
-		return nil, fmt.Errorf("agent: %s", resp.GetError())
+		return resp, fmt.Errorf("agent: %s", resp.GetError())
 	}
 	return resp, nil
 }
