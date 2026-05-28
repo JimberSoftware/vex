@@ -110,6 +110,7 @@ func execCmd(cid, port *uint32) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().SetInterspersed(false)
 	cmd.Flags().Uint32Var(&timeout, "timeout", 0, "timeout in seconds (0 = no timeout)")
 	return cmd
 }
