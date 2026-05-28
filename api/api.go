@@ -5,6 +5,7 @@ type ExecRequest struct {
 	Command        string   `json:"command"`
 	Arguments      []string `json:"arguments,omitempty"`
 	TimeoutSeconds uint32   `json:"timeout_seconds,omitempty"`
+	Username       string   `json:"username,omitempty"`
 }
 
 type ExecResponse struct {

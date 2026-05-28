@@ -81,6 +81,7 @@ func hostInfoCmd(cid, port *uint32) *cobra.Command {
 
 func execCmd(cid, port *uint32) *cobra.Command {
 	var timeout uint32
+	var username string
 	cmd := &cobra.Command{
 		Use:   "exec <command> [args...]",
 		Short: "Execute a command on the agent host",
@@ -91,7 +92,7 @@ func execCmd(cid, port *uint32) *cobra.Command {
 				return err
 			}
 			defer c.Close()
-			ex, err := c.Exec(args[0], args[1:], timeout)
+			ex, err := c.Exec(args[0], args[1:], timeout, username)
 			if err != nil {
 				return err
 			}
@@ -112,5 +113,6 @@ func execCmd(cid, port *uint32) *cobra.Command {
 	}
 	cmd.Flags().SetInterspersed(false)
 	cmd.Flags().Uint32Var(&timeout, "timeout", 0, "timeout in seconds (0 = no timeout)")
+	cmd.Flags().StringVar(&username, "user", "", "run command as this user")
 	return cmd
 }

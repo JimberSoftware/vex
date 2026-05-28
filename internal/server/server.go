@@ -10,7 +10,7 @@ import (
 type AgentClient interface {
 	Ping() error
 	HostInfo() (client.HostInfo, error)
-	Exec(command string, args []string, timeoutSeconds uint32) (client.ExecResult, error)
+	Exec(command string, args []string, timeoutSeconds uint32, username string) (client.ExecResult, error)
 	Close() error
 }
 
