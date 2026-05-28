@@ -24,6 +24,7 @@ func execCommand(ctx context.Context, log *slog.Logger, req *vmp.ExecRequest) *v
 	}
 
 	cmd := exec.CommandContext(ctx, req.GetCommand(), req.GetArguments()...) //nolint:gosec
+	defer releaseRunAs(cmd)
 
 	if username := req.GetUsername(); username != "" {
 		if err := configureRunAs(cmd, username); err != nil {

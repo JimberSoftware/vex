@@ -55,3 +55,5 @@ func configureRunAs(cmd *exec.Cmd, username string) error {
 
 	return nil
 }
+
+func releaseRunAs(_ *exec.Cmd) {}
