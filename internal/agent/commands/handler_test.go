@@ -5,6 +5,8 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"os"
+	"os/user"
 	"strings"
 	"testing"
 
@@ -93,6 +95,55 @@ func TestHandle_Exec(t *testing.T) {
 	}
 	if got := strings.TrimSpace(string(ex.Exec.GetStdout())); got != "hello" {
 		t.Errorf("stdout: got %q, want %q", got, "hello")
+	}
+}
+
+func TestHandle_ExecAsUser(t *testing.T) {
+	t.Parallel()
+
+	currentUser, err := user.Current()
+	if err != nil {
+		t.Skip("cannot determine current user")
+	}
+	if os.Getuid() != 0 {
+		t.Skip("requires root to switch user")
+	}
+
+	resp := sendAndReceive(t, &vmp.Request{
+		Id: 7,
+		Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
+			Command:  "whoami",
+			Username: currentUser.Username,
+		}},
+	})
+	if resp.GetError() != "" {
+		t.Fatalf("unexpected error: %s", resp.GetError())
+	}
+	ex, ok := resp.GetResult().(*vmp.Response_Exec)
+	if !ok {
+		t.Fatal("expected ExecResponse")
+	}
+	got := strings.TrimSpace(string(ex.Exec.GetStdout()))
+	if got != currentUser.Username {
+		t.Errorf("whoami: got %q, want %q", got, currentUser.Username)
+	}
+}
+
+func TestHandle_ExecAsUser_NotFound(t *testing.T) {
+	t.Parallel()
+
+	resp := sendAndReceive(t, &vmp.Request{
+		Id: 8,
+		Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
+			Command:  "whoami",
+			Username: "nonexistent_user_xyzzy",
+		}},
+	})
+	if resp.GetError() == "" {
+		t.Fatal("expected error for nonexistent user")
+	}
+	if !strings.Contains(resp.GetError(), "not found") {
+		t.Errorf("error should mention 'not found', got: %s", resp.GetError())
 	}
 }
 

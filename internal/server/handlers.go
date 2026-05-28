@@ -104,7 +104,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 
 	s.setWriteDeadline(w, req.TimeoutSeconds)
 
-	result, err := agent.Exec(req.Command, req.Arguments, req.TimeoutSeconds)
+	result, err := agent.Exec(req.Command, req.Arguments, req.TimeoutSeconds, req.Username)
 	if err != nil {
 		// todo: distinguish between agent error and command execution error
 		writeJSON(w, http.StatusOK, api.ExecResponse{

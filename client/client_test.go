@@ -50,7 +50,7 @@ func TestClientExec(t *testing.T) {
 	c, done := agentClient(t)
 	defer done()
 
-	ex, err := c.Exec("echo", []string{"hello"}, 0)
+	ex, err := c.Exec("echo", []string{"hello"}, 0, "")
 	if err != nil {
 		t.Fatalf("Exec: %v", err)
 	}

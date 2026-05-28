@@ -38,6 +38,7 @@ message ExecRequest {
   string          command         = 1;
   uint32          timeout_seconds = 2;
   repeated string arguments       = 3;
+  string          username        = 4;
 }
 message ExecResponse {
   int32 exit_code = 1;

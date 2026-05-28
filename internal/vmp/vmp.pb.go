@@ -414,6 +414,7 @@ type ExecRequest struct {
 	Command        string                 `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`
 	TimeoutSeconds uint32                 `protobuf:"varint,2,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
 	Arguments      []string               `protobuf:"bytes,3,rep,name=arguments,proto3" json:"arguments,omitempty"`
+	Username       string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -467,6 +468,13 @@ func (x *ExecRequest) GetArguments() []string {
 		return x.Arguments
 	}
 	return nil
+}
+
+func (x *ExecRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
 }
 
 type ExecResponse struct {
@@ -561,11 +569,12 @@ const file_vmp_proto_rawDesc = "" +
 	"\x10HostInfoResponse\x12\x0e\n" +
 	"\x02os\x18\x01 \x01(\tR\x02os\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12\x12\n" +
-	"\x04arch\x18\x03 \x01(\tR\x04arch\"n\n" +
+	"\x04arch\x18\x03 \x01(\tR\x04arch\"\x8a\x01\n" +
 	"\vExecRequest\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12'\n" +
 	"\x0ftimeout_seconds\x18\x02 \x01(\rR\x0etimeoutSeconds\x12\x1c\n" +
-	"\targuments\x18\x03 \x03(\tR\targuments\"x\n" +
+	"\targuments\x18\x03 \x03(\tR\targuments\x12\x1a\n" +
+	"\busername\x18\x04 \x01(\tR\busername\"x\n" +
 	"\fExecResponse\x12\x1b\n" +
 	"\texit_code\x18\x01 \x01(\x05R\bexitCode\x12\x16\n" +
 	"\x06stdout\x18\x02 \x01(\fR\x06stdout\x12\x16\n" +
