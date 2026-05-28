@@ -14,16 +14,18 @@ import (
 )
 
 type mockClient struct {
-	pingErr     error
-	hostInfo    client.HostInfo
-	hostInfoErr error
-	execResult  client.ExecResult
-	execErr     error
+	pingErr          error
+	hostInfo         client.HostInfo
+	hostInfoErr      error
+	execResult       client.ExecResult
+	execErr          error
+	execUsernameSeen string
 }
 
 func (m *mockClient) Ping() error                        { return m.pingErr }
 func (m *mockClient) HostInfo() (client.HostInfo, error) { return m.hostInfo, m.hostInfoErr }
-func (m *mockClient) Exec(_ string, _ []string, _ uint32, _ string) (client.ExecResult, error) {
+func (m *mockClient) Exec(_ string, _ []string, _ uint32, username string) (client.ExecResult, error) {
+	m.execUsernameSeen = username
 	return m.execResult, m.execErr
 }
 func (m *mockClient) Close() error { return nil }
@@ -143,6 +145,38 @@ func TestHandleExec(t *testing.T) {
 	}
 	if resp.ExitCode != 0 {
 		t.Fatalf("unexpected exit code: %d", resp.ExitCode)
+	}
+}
+
+func TestHandleExec_WithUsername(t *testing.T) {
+	t.Parallel()
+	mc := &mockClient{
+		execResult: client.ExecResult{
+			Stdout:   []byte("bob\n"),
+			ExitCode: 0,
+		},
+	}
+	srv := newTestServer(mockConnector(mc))
+
+	body := strings.NewReader(`{"command":"whoami","username":"bob"}`)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp api.ExecResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Stdout != "bob\n" {
+		t.Fatalf("unexpected stdout: %q", resp.Stdout)
+	}
+	if mc.execUsernameSeen != "bob" {
+		t.Fatalf("unexpected username: %q", mc.execUsernameSeen)
 	}
 }
 
