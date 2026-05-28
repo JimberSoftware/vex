@@ -25,6 +25,15 @@ func execCommand(ctx context.Context, log *slog.Logger, req *vmp.ExecRequest) *v
 
 	cmd := exec.CommandContext(ctx, req.GetCommand(), req.GetArguments()...) //nolint:gosec
 
+	if username := req.GetUsername(); username != "" {
+		if err := configureRunAs(cmd, username); err != nil {
+			return &vmp.Response{
+				Error:  err.Error(),
+				Result: &vmp.Response_Exec{Exec: &vmp.ExecResponse{ExitCode: killedExitCode}},
+			}
+		}
+	}
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
