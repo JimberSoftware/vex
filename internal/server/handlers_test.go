@@ -23,7 +23,7 @@ type mockClient struct {
 
 func (m *mockClient) Ping() error                        { return m.pingErr }
 func (m *mockClient) HostInfo() (client.HostInfo, error) { return m.hostInfo, m.hostInfoErr }
-func (m *mockClient) Exec(_ string, _ []string, _ uint32) (client.ExecResult, error) {
+func (m *mockClient) Exec(_ string, _ []string, _ uint32, _ string) (client.ExecResult, error) {
 	return m.execResult, m.execErr
 }
 func (m *mockClient) Close() error { return nil }
