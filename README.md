@@ -9,7 +9,7 @@ Vex is a lightweight host-to-guest VM communication tool over [vsock](https://ma
 
 We need to run end-to-end automation tests against ephemeral VMs spawned from Proxmox templates: installing software, running commands, and verifying integrations across different operating systems. QEMU Guest Agent worked initially, but as we scaled up (more VMs, more concurrent commands) we kept hitting timeout errors that no amount of tuning could fix.
 
-Research led us to vsock as a faster, more stable transport. However, `qemu-ga` doesn't support binding to vsock on Windows guests, which was a dealbreaker for our multi-OS test matrix. Rather than maintaining a fork of `qemu-ga` or relying on another opaque tool where failures are hard to diagnose, we built Vex: a minimal, purpose-built tool that does one thing well — reliable host↔guest communication over vsock.
+Research led us to vsock as a faster, more stable transport. However, `qemu-ga` doesn't support binding to vsock on Windows guests, which was a dealbreaker for our multi-OS test matrix. Rather than maintaining a fork of `qemu-ga` or relying on another opaque tool where failures are hard to diagnose, we built Vex: a minimal, purpose-built tool that does one thing well: reliable host↔guest communication over vsock.
 
 The HTTP daemon ( `vexd` ) exists so our test orchestrator can run on a separate machine and drive everything through a simple REST API.
 
