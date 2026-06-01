@@ -39,10 +39,12 @@ message ExecRequest {
   uint32          timeout_seconds = 2;
   repeated string arguments       = 3;
   string          username        = 4;
+  bool            detach          = 5;
 }
 message ExecResponse {
   int32 exit_code = 1;
   bytes stdout    = 2;
   bytes stderr    = 3;
   bool  timed_out = 4;
+  int32 pid       = 5;
 }

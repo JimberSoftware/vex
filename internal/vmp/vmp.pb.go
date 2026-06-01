@@ -415,6 +415,7 @@ type ExecRequest struct {
 	TimeoutSeconds uint32                 `protobuf:"varint,2,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
 	Arguments      []string               `protobuf:"bytes,3,rep,name=arguments,proto3" json:"arguments,omitempty"`
 	Username       string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	Detach         bool                   `protobuf:"varint,5,opt,name=detach,proto3" json:"detach,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -477,12 +478,20 @@ func (x *ExecRequest) GetUsername() string {
 	return ""
 }
 
+func (x *ExecRequest) GetDetach() bool {
+	if x != nil {
+		return x.Detach
+	}
+	return false
+}
+
 type ExecResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ExitCode      int32                  `protobuf:"varint,1,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
 	Stdout        []byte                 `protobuf:"bytes,2,opt,name=stdout,proto3" json:"stdout,omitempty"`
 	Stderr        []byte                 `protobuf:"bytes,3,opt,name=stderr,proto3" json:"stderr,omitempty"`
 	TimedOut      bool                   `protobuf:"varint,4,opt,name=timed_out,json=timedOut,proto3" json:"timed_out,omitempty"`
+	Pid           int32                  `protobuf:"varint,5,opt,name=pid,proto3" json:"pid,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -545,6 +554,13 @@ func (x *ExecResponse) GetTimedOut() bool {
 	return false
 }
 
+func (x *ExecResponse) GetPid() int32 {
+	if x != nil {
+		return x.Pid
+	}
+	return 0
+}
+
 var File_vmp_proto protoreflect.FileDescriptor
 
 const file_vmp_proto_rawDesc = "" +
@@ -569,17 +585,19 @@ const file_vmp_proto_rawDesc = "" +
 	"\x10HostInfoResponse\x12\x0e\n" +
 	"\x02os\x18\x01 \x01(\tR\x02os\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12\x12\n" +
-	"\x04arch\x18\x03 \x01(\tR\x04arch\"\x8a\x01\n" +
+	"\x04arch\x18\x03 \x01(\tR\x04arch\"\xa2\x01\n" +
 	"\vExecRequest\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12'\n" +
 	"\x0ftimeout_seconds\x18\x02 \x01(\rR\x0etimeoutSeconds\x12\x1c\n" +
 	"\targuments\x18\x03 \x03(\tR\targuments\x12\x1a\n" +
-	"\busername\x18\x04 \x01(\tR\busername\"x\n" +
+	"\busername\x18\x04 \x01(\tR\busername\x12\x16\n" +
+	"\x06detach\x18\x05 \x01(\bR\x06detach\"\x8a\x01\n" +
 	"\fExecResponse\x12\x1b\n" +
 	"\texit_code\x18\x01 \x01(\x05R\bexitCode\x12\x16\n" +
 	"\x06stdout\x18\x02 \x01(\fR\x06stdout\x12\x16\n" +
 	"\x06stderr\x18\x03 \x01(\fR\x06stderr\x12\x1b\n" +
-	"\ttimed_out\x18\x04 \x01(\bR\btimedOutB,Z*github.com/jimbersoftware/vex/internal/vmpb\x06proto3"
+	"\ttimed_out\x18\x04 \x01(\bR\btimedOut\x12\x10\n" +
+	"\x03pid\x18\x05 \x01(\x05R\x03pidB,Z*github.com/jimbersoftware/vex/internal/vmpb\x06proto3"
 
 var (
 	file_vmp_proto_rawDescOnce sync.Once
