@@ -50,7 +50,7 @@ func TestClientExec(t *testing.T) {
 	c, done := agentClient(t)
 	defer done()
 
-	ex, err := c.Exec("echo", []string{"hello"}, 0, "")
+	ex, err := c.Exec("echo", []string{"hello"}, 0, "", false)
 	if err != nil {
 		t.Fatalf("Exec: %v", err)
 	}
@@ -59,5 +59,19 @@ func TestClientExec(t *testing.T) {
 	}
 	if string(ex.Stdout) == "" {
 		t.Error("stdout should not be empty")
+	}
+}
+
+func TestClientExecDetach(t *testing.T) {
+	t.Parallel()
+	c, done := agentClient(t)
+	defer done()
+
+	ex, err := c.Exec("sleep", []string{"60"}, 0, "", true)
+	if err != nil {
+		t.Fatalf("Exec detach: %v", err)
+	}
+	if ex.PID <= 0 {
+		t.Errorf("expected positive PID, got %d", ex.PID)
 	}
 }
