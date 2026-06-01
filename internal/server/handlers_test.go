@@ -24,7 +24,7 @@ type mockClient struct {
 
 func (m *mockClient) Ping() error                        { return m.pingErr }
 func (m *mockClient) HostInfo() (client.HostInfo, error) { return m.hostInfo, m.hostInfoErr }
-func (m *mockClient) Exec(_ string, _ []string, _ uint32, username string) (client.ExecResult, error) {
+func (m *mockClient) Exec(_ string, _ []string, _ uint32, username string, _ bool) (client.ExecResult, error) {
 	m.execUsernameSeen = username
 	return m.execResult, m.execErr
 }
@@ -238,5 +238,33 @@ func TestHandleExec_DialFailure(t *testing.T) {
 
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("expected 502, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHandleExec_Detach(t *testing.T) {
+	t.Parallel()
+	mc := &mockClient{
+		execResult: client.ExecResult{
+			PID: 12345,
+		},
+	}
+	srv := newTestServer(mockConnector(mc))
+
+	body := strings.NewReader(`{"command":"sleep","arguments":["60"],"detach":true}`)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/vms/3/exec", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp api.ExecResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.PID != 12345 {
+		t.Fatalf("expected pid 12345, got %d", resp.PID)
 	}
 }

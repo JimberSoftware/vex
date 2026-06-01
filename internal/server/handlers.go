@@ -102,16 +102,18 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.setWriteDeadline(w, req.TimeoutSeconds)
+	if !req.Detach {
+		s.setWriteDeadline(w, req.TimeoutSeconds)
+	}
 
-	result, err := agent.Exec(req.Command, req.Arguments, req.TimeoutSeconds, req.Username)
+	result, err := agent.Exec(req.Command, req.Arguments, req.TimeoutSeconds, req.Username, req.Detach)
 	if err != nil {
-		// todo: distinguish between agent error and command execution error
 		writeJSON(w, http.StatusOK, api.ExecResponse{
 			Stdout:   string(result.Stdout),
 			Stderr:   string(result.Stderr),
 			ExitCode: result.ExitCode,
 			TimedOut: result.TimedOut,
+			PID:      result.PID,
 			Error:    err.Error(),
 		})
 		return
@@ -122,5 +124,6 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		Stderr:   string(result.Stderr),
 		ExitCode: result.ExitCode,
 		TimedOut: result.TimedOut,
+		PID:      result.PID,
 	})
 }
