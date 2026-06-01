@@ -6,6 +6,7 @@ type ExecRequest struct {
 	Arguments      []string `json:"arguments,omitempty"`
 	TimeoutSeconds uint32   `json:"timeout_seconds,omitempty"`
 	Username       string   `json:"username,omitempty"`
+	Detach         bool     `json:"detach,omitempty"`
 }
 
 type ExecResponse struct {
@@ -14,6 +15,7 @@ type ExecResponse struct {
 	ExitCode int32  `json:"exit_code"`
 	TimedOut bool   `json:"timed_out"`
 	Error    string `json:"error,omitempty"`
+	PID      int32  `json:"pid,omitempty"`
 }
 
 type HostInfoResponse struct {
