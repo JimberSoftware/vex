@@ -22,6 +22,7 @@ type ExecResult struct {
 	Stderr   []byte
 	ExitCode int32
 	TimedOut bool
+	PID      int32
 }
 
 type Client struct {
@@ -73,12 +74,13 @@ func (c *Client) HostInfo() (HostInfo, error) {
 	}, nil
 }
 
-func (c *Client) Exec(command string, args []string, timeoutSeconds uint32, username string) (ExecResult, error) {
+func (c *Client) Exec(command string, args []string, timeoutSeconds uint32, username string, detach bool) (ExecResult, error) {
 	resp, err := c.send(&vmp.Request{Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
 		Command:        command,
 		Arguments:      args,
 		TimeoutSeconds: timeoutSeconds,
 		Username:       username,
+		Detach:         detach,
 	}}})
 	if resp == nil {
 		return ExecResult{}, err
@@ -95,6 +97,7 @@ func (c *Client) Exec(command string, args []string, timeoutSeconds uint32, user
 		Stderr:   ex.Exec.GetStderr(),
 		ExitCode: ex.Exec.GetExitCode(),
 		TimedOut: ex.Exec.GetTimedOut(),
+		PID:      ex.Exec.GetPid(),
 	}, err
 }
 
