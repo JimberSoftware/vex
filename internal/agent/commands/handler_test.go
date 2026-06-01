@@ -203,3 +203,29 @@ func TestHandle_UnknownCommand(t *testing.T) {
 		t.Error("expected error for nil command")
 	}
 }
+
+func TestHandle_ExecDetach(t *testing.T) {
+	t.Parallel()
+
+	resp := sendAndReceive(t, &vmp.Request{
+		Id: 9,
+		Command: &vmp.Request_Exec{Exec: &vmp.ExecRequest{
+			Command:   "sleep",
+			Arguments: []string{"60"},
+			Detach:    true,
+		}},
+	})
+	if resp.GetError() != "" {
+		t.Fatalf("unexpected error: %s", resp.GetError())
+	}
+	ex, ok := resp.GetResult().(*vmp.Response_Exec)
+	if !ok {
+		t.Fatal("expected ExecResponse")
+	}
+	if ex.Exec.GetPid() <= 0 {
+		t.Errorf("expected positive pid, got %d", ex.Exec.GetPid())
+	}
+	if ex.Exec.GetExitCode() != 0 {
+		t.Errorf("exit_code: got %d, want 0", ex.Exec.GetExitCode())
+	}
+}
