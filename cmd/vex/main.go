@@ -92,7 +92,7 @@ func execCmd(cid, port *uint32) *cobra.Command {
 				return err
 			}
 			defer c.Close()
-			ex, err := c.Exec(args[0], args[1:], timeout, username)
+			ex, err := c.Exec(args[0], args[1:], timeout, username, false)
 			if err != nil {
 				return err
 			}

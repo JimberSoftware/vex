@@ -41,7 +41,7 @@ func execCommand(ctx context.Context, log *slog.Logger, req *vmp.ExecRequest) *v
 func buildCommand(ctx context.Context, req *vmp.ExecRequest) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
 	if req.GetDetach() {
-		cmd = exec.Command(req.GetCommand(), req.GetArguments()...) //nolint:gosec
+		cmd = exec.Command(req.GetCommand(), req.GetArguments()...) //nolint:gosec,noctx // detached process outlives request context
 	} else {
 		cmd = exec.CommandContext(ctx, req.GetCommand(), req.GetArguments()...) //nolint:gosec
 	}
