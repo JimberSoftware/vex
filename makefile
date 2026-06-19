@@ -14,3 +14,9 @@ installer: agent-windows
 	@cp vex-agent.exe dist/vex-agent.exe
 	makensis -DVERSION=$(VERSION) -DBIN_PATH=../../dist/vex-agent.exe scripts/installer/vex-agent.nsi
 	@echo "Installer built: dist/vex-agent-installer.exe"
+
+agent-deb:
+	@scripts/package/build-deb.sh -v $(VERSION)
+
+agent-deb-arm:
+	@scripts/package/build-deb.sh -v $(VERSION) -a arm64

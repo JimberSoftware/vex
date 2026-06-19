@@ -1,0 +1,12 @@
+[Unit]
+Description=vex guest agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/vex-agent
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

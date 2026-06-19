@@ -38,7 +38,67 @@ jobs:
           cp "$AGENT_EXE" dist/vex-agent.exe
           makensis -DVERSION="$VERSION" -DBIN_PATH=../../dist/vex-agent.exe scripts/installer/vex-agent.nsi
 
-      - name: Upload installer to release
-        run: gh release upload "${GITHUB_REF_NAME}" dist/vex-agent-installer.exe
+      - name: Build .deb packages
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for ARCH in amd64; do
+            DEB_DIR="dist/deb-${ARCH}"
+            rm -rf "$DEB_DIR"
+            mkdir -p "$DEB_DIR/DEBIAN"
+            mkdir -p "$DEB_DIR/usr/bin"
+            mkdir -p "$DEB_DIR/lib/systemd/system"
+
+            BIN_DIR=$(find dist -type d -path "*/vex-agent_linux_${ARCH}*" | head -1)
+            cp "${BIN_DIR}/vex-agent" "$DEB_DIR/usr/bin/vex-agent"
+
+            cat > "$DEB_DIR/DEBIAN/control" << EOF
+          Package: vex-agent
+          Version: ${VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: ${ARCH}
+          Maintainer: JimberSoftware
+          Description: Vex guest agent for VM communication over vsock
+           The vex-agent listens on a vsock socket inside a guest VM and
+           executes commands received from the host-side vex or vexd.
+           .
+           Supports Linux and Windows guests. This package includes a
+           systemd service that starts the agent automatically on boot.
+          EOF
+
+            cat > "$DEB_DIR/DEBIAN/postinst" << 'SCRIPT'
+          #!/bin/sh
+          set -e
+          case "$1" in
+              configure)
+                  systemctl daemon-reload || true
+                  systemctl enable vex-agent || true
+                  systemctl start vex-agent || true
+                  ;;
+          esac
+          SCRIPT
+
+            cat > "$DEB_DIR/DEBIAN/prerm" << 'SCRIPT'
+          #!/bin/sh
+          set -e
+          case "$1" in
+              remove|upgrade|deconfigure)
+                  systemctl stop vex-agent 2>/dev/null || true
+                  systemctl disable vex-agent 2>/dev/null || true
+                  ;;
+          esac
+          SCRIPT
+
+            chmod 0755 "$DEB_DIR/DEBIAN/postinst" "$DEB_DIR/DEBIAN/prerm"
+            cp init/vex-agent.service "$DEB_DIR/lib/systemd/system/vex-agent.service"
+
+            dpkg-deb --root-owner-group --build "$DEB_DIR" "dist/vex-agent_${VERSION}_${ARCH}.deb"
+          done
+
+      - name: Upload artifacts to release
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" \
+            dist/vex-agent-installer.exe \
+            dist/vex-agent_*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
