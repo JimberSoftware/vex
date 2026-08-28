@@ -58,6 +58,26 @@ Download the appropriate archive for your architecture:
 
 Extract and place `vex-agent.exe` somewhere on your `PATH` .
 
+### macOS (guest VM)
+
+Install the package matching the guest architecture:
+
+```bash
+VERSION=1.2.3
+curl -fLO "https://github.com/JimberSoftware/vex/releases/download/v${VERSION}/vex-agent_${VERSION}_amd64.pkg"
+sudo installer -pkg "vex-agent_${VERSION}_amd64.pkg" -target /
+```
+
+The package installs `/usr/local/bin/vex-agent` and the
+`io.jimber.vex-agent` system LaunchDaemon. The daemon starts during boot,
+before the login screen, and is kept running by `launchd`.
+
+Verify the service without logging in to the desktop:
+
+```bash
+sudo launchctl print system/io.jimber.vex-agent
+```
+
 ### Verify
 
 ```bash

@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+if [ "${3:-/}" != "/" ]; then
+    echo "vex-agent can only be installed on the active system volume" >&2
+    exit 1
+fi
+
+label="io.jimber.vex-agent"
+plist="/Library/LaunchDaemons/${label}.plist"
+binary="/usr/local/bin/vex-agent"
+
+chown root:wheel "$binary" "$plist"
+chmod 0755 "$binary"
+chmod 0644 "$plist"
+
+launchctl bootout "system/${label}" 2>/dev/null || true
+launchctl bootstrap system "$plist"
+launchctl enable "system/${label}"
+launchctl kickstart -k "system/${label}"
+
+exit 0

@@ -9,8 +9,35 @@ permissions:
   contents: write
 
 jobs:
+  macos-package:
+    name: Build macOS installer
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build macOS packages
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for ARCH in amd64 arm64; do
+            scripts/package/build-pkg.sh "$VERSION" "$ARCH"
+          done
+          cd dist
+          shasum -a 256 vex-agent_*.pkg > checksums-macos.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-packages
+          path: |
+            dist/vex-agent_*.pkg
+            dist/checksums-macos.txt
+
   release:
     name: Release
+    needs: macos-package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -95,10 +122,17 @@ jobs:
             dpkg-deb --root-owner-group --build "$DEB_DIR" "dist/vex-agent_${VERSION}_${ARCH}.deb"
           done
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-packages
+          path: dist
+
       - name: Upload artifacts to release
         run: |
           gh release upload "${GITHUB_REF_NAME}" \
             dist/vex-agent-installer.exe \
-            dist/vex-agent_*.deb
+            dist/vex-agent_*.deb \
+            dist/vex-agent_*.pkg \
+            dist/checksums-macos.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
