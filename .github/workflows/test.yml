@@ -19,3 +19,24 @@ jobs:
 
       - name: Run tests
         run: go test -race -timeout=5m ./...
+
+  macos-package:
+    name: Build macOS installer
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build packages
+        run: |
+          for ARCH in amd64 arm64; do
+            scripts/package/build-pkg.sh 0.0.0 "$ARCH"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-packages
+          path: dist/vex-agent_*.pkg

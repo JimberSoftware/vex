@@ -32,11 +32,23 @@ func osVersion(ctx context.Context) string {
 	switch runtime.GOOS {
 	case "linux":
 		return linuxVersion()
+	case "darwin":
+		return darwinVersion(ctx)
 	case "windows":
 		return windowsVersion(ctx)
 	default:
 		return runtime.GOOS
 	}
+}
+
+func darwinVersion(ctx context.Context) string {
+	ctx, cancel := context.WithTimeout(ctx, windowsVersionTimeout)
+	defer cancel()
+	output, err := exec.CommandContext(ctx, "/usr/bin/sw_vers", "-productVersion").Output()
+	if err != nil {
+		return unknownVersion
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func linuxVersion() string {
