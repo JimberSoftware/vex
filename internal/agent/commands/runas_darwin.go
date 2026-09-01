@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -35,12 +36,18 @@ func configureRunAs(cmd *exec.Cmd, username string) error {
 		}
 	}
 
+	credential := &syscall.Credential{
+		Uid:    uint32(uid),
+		Gid:    uint32(gid),
+		Groups: supplementary,
+	}
+	tempDir, err := darwinUserTempDir(credential)
+	if err != nil {
+		return fmt.Errorf("resolving temporary directory for %q: %w", username, err)
+	}
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid:    uint32(uid),
-			Gid:    uint32(gid),
-			Groups: supplementary,
-		},
+		Credential: credential,
 	}
 	cmd.Dir = usr.HomeDir
 	cmd.Env = []string{
@@ -48,8 +55,23 @@ func configureRunAs(cmd *exec.Cmd, username string) error {
 		"USER=" + usr.Username,
 		"LOGNAME=" + usr.Username,
 		"PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+		"TMPDIR=" + tempDir,
 	}
 	return nil
+}
+
+func darwinUserTempDir(credential *syscall.Credential) (string, error) {
+	cmd := exec.Command("/usr/bin/getconf", "DARWIN_USER_TEMP_DIR") //nolint:gosec,noctx // fixed system utility
+	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: credential}
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	tempDir := strings.TrimSpace(string(output))
+	if tempDir == "" {
+		return "", fmt.Errorf("getconf returned an empty path")
+	}
+	return tempDir, nil
 }
 
 func releaseRunAs(_ *exec.Cmd) {}
