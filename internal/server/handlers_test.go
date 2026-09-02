@@ -1,9 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,6 +24,11 @@ type mockClient struct {
 	execResult       client.ExecResult
 	execErr          error
 	execUsernameSeen string
+	uploadContent    []byte
+	uploadPath       string
+	uploadMode       uint32
+	uploadChecksum   []byte
+	uploadErr        error
 }
 
 func (m *mockClient) Ping() error                        { return m.pingErr }
@@ -27,6 +36,13 @@ func (m *mockClient) HostInfo() (client.HostInfo, error) { return m.hostInfo, m.
 func (m *mockClient) Exec(_ string, _ []string, _ uint32, username string, _ bool) (client.ExecResult, error) {
 	m.execUsernameSeen = username
 	return m.execResult, m.execErr
+}
+func (m *mockClient) Upload(path string, content io.Reader, _ uint64, mode uint32, checksum []byte) (uint64, error) {
+	m.uploadPath = path
+	m.uploadMode = mode
+	m.uploadChecksum = append([]byte(nil), checksum...)
+	m.uploadContent, _ = io.ReadAll(content)
+	return uint64(len(m.uploadContent)), m.uploadErr
 }
 func (m *mockClient) Close() error { return nil }
 
@@ -266,5 +282,42 @@ func TestHandleExec_Detach(t *testing.T) {
 	}
 	if resp.PID != 12345 {
 		t.Fatalf("expected pid 12345, got %d", resp.PID)
+	}
+}
+
+func TestHandleUpload(t *testing.T) {
+	t.Parallel()
+	mc := &mockClient{}
+	srv := newTestServer(mockConnector(mc))
+	content := []byte("native test binary")
+	checksum := sha256.Sum256(content)
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPut, "/vms/3/files?path=%2Ftmp%2Fintegration.test", bytes.NewReader(content))
+	req.Header.Set(api.UploadModeHeader, "750")
+	req.Header.Set(api.UploadSHA256Header, hex.EncodeToString(checksum[:]))
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if mc.uploadPath != "/tmp/integration.test" || mc.uploadMode != 0o750 {
+		t.Fatalf("unexpected upload metadata: path=%q mode=%o", mc.uploadPath, mc.uploadMode)
+	}
+	if !bytes.Equal(mc.uploadContent, content) || !bytes.Equal(mc.uploadChecksum, checksum[:]) {
+		t.Fatal("upload content or checksum was not forwarded")
+	}
+}
+
+func TestHandleUploadRequiresChecksum(t *testing.T) {
+	t.Parallel()
+	srv := newTestServer(mockConnector(&mockClient{}))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPut, "/vms/3/files?path=%2Ftmp%2Ffile", strings.NewReader("content"))
+	req.Header.Set(api.UploadModeHeader, "600")
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

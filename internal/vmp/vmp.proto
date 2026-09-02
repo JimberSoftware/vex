@@ -7,9 +7,12 @@ message Request {
   uint64 id = 1;
 
   oneof command {
-    PingRequest     ping      = 2;
-    HostInfoRequest host_info = 3;
-    ExecRequest     exec      = 4;
+    PingRequest         ping          = 2;
+    HostInfoRequest     host_info     = 3;
+    ExecRequest         exec          = 4;
+    UploadStartRequest  upload_start  = 5;
+    UploadChunkRequest  upload_chunk  = 6;
+    UploadFinishRequest upload_finish = 7;
   }
 }
 
@@ -21,6 +24,7 @@ message Response {
     PingResponse     ping      = 3;
     HostInfoResponse host_info = 4;
     ExecResponse     exec      = 5;
+    UploadResponse   upload    = 6;
   }
 }
 
@@ -47,4 +51,18 @@ message ExecResponse {
   bytes stderr    = 3;
   bool  timed_out = 4;
   int32 pid       = 5;
+}
+
+message UploadStartRequest {
+  string path    = 1;
+  uint32 mode    = 2;
+  uint64 size    = 3;
+  bytes sha256   = 4;
+}
+message UploadChunkRequest {
+  bytes data = 1;
+}
+message UploadFinishRequest {}
+message UploadResponse {
+  uint64 bytes_written = 1;
 }
