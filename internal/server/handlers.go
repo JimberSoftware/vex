@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +11,8 @@ import (
 
 	"github.com/jimbersoftware/vex/api"
 )
+
+const maxUploadSize = 2 * 1024 * 1024 * 1024
 
 func (s *Server) parseCID(r *http.Request) (uint32, error) {
 	cidStr := r.PathValue("cid")
@@ -126,4 +130,44 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		TimedOut: result.TimedOut,
 		PID:      result.PID,
 	})
+}
+
+func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		writeError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+	if r.ContentLength < 0 {
+		writeError(w, http.StatusLengthRequired, "content length is required")
+		return
+	}
+	if r.ContentLength > maxUploadSize {
+		writeError(w, http.StatusRequestEntityTooLarge, "upload exceeds 2 GiB")
+		return
+	}
+
+	mode, err := strconv.ParseUint(r.Header.Get(api.UploadModeHeader), 8, 32)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid file mode")
+		return
+	}
+	checksum, err := hex.DecodeString(r.Header.Get(api.UploadSHA256Header))
+	if err != nil || len(checksum) != sha256.Size {
+		writeError(w, http.StatusBadRequest, "invalid sha256 checksum")
+		return
+	}
+
+	agent, ok := s.dial(w, r)
+	if !ok {
+		return
+	}
+	defer agent.Close()
+
+	written, err := agent.Upload(path, http.MaxBytesReader(w, r.Body, maxUploadSize), uint64(r.ContentLength), uint32(mode), checksum)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, api.UploadResponse{BytesWritten: written})
 }

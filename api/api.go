@@ -1,6 +1,11 @@
 // Package api defines the public HTTP request and response types for vexd.
 package api
 
+const (
+	UploadModeHeader   = "X-Vex-File-Mode"
+	UploadSHA256Header = "X-Vex-File-Sha256"
+)
+
 type ExecRequest struct {
 	Command        string   `json:"command"`
 	Arguments      []string `json:"arguments,omitempty"`
@@ -22,6 +27,17 @@ type HostInfoResponse struct {
 	OS      string `json:"os"`
 	Version string `json:"version"`
 	Arch    string `json:"arch"`
+}
+
+type UploadRequest struct {
+	Path   string
+	Mode   uint32
+	Size   uint64
+	SHA256 string
+}
+
+type UploadResponse struct {
+	BytesWritten uint64 `json:"bytes_written"`
 }
 
 type ErrorResponse struct {

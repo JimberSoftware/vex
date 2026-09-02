@@ -1,7 +1,10 @@
 package client_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -181,6 +184,49 @@ func TestExec_APIError(t *testing.T) {
 	}
 	if apiErr.Message != "command is required" {
 		t.Errorf("unexpected message: %q", apiErr.Message)
+	}
+}
+
+func TestUpload_Success(t *testing.T) {
+	t.Parallel()
+	content := []byte("native test binary")
+	checksum := sha256.Sum256(content)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("expected PUT, got %s", r.Method)
+		}
+		if r.URL.Path != "/vms/3/files" || r.URL.Query().Get("path") != "/tmp/integration.test" {
+			t.Errorf("unexpected upload URL: %s", r.URL.String())
+		}
+		if r.Header.Get(api.UploadModeHeader) != "750" {
+			t.Errorf("unexpected mode: %q", r.Header.Get(api.UploadModeHeader))
+		}
+		if r.Header.Get(api.UploadSHA256Header) != hex.EncodeToString(checksum[:]) {
+			t.Errorf("unexpected checksum: %q", r.Header.Get(api.UploadSHA256Header))
+		}
+		got, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read upload: %v", err)
+		}
+		if !bytes.Equal(got, content) {
+			t.Errorf("unexpected content: %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(api.UploadResponse{BytesWritten: uint64(len(got))})
+	}))
+	defer srv.Close()
+
+	cl := vexclient.New(srv.URL)
+	result, err := cl.Upload(context.Background(), 3, api.UploadRequest{
+		Path:   "/tmp/integration.test",
+		Mode:   0o750,
+		Size:   uint64(len(content)),
+		SHA256: hex.EncodeToString(checksum[:]),
+	}, bytes.NewReader(content))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.BytesWritten != uint64(len(content)) {
+		t.Errorf("unexpected bytes written: %d", result.BytesWritten)
 	}
 }
 

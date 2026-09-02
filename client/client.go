@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sync/atomic"
 
 	"github.com/jimbersoftware/vex/internal/vmp"
 	"github.com/jimbersoftware/vex/internal/vsock"
 )
+
+const uploadChunkSize = 1024 * 1024
 
 type HostInfo struct {
 	OS      string
@@ -99,6 +102,59 @@ func (c *Client) Exec(command string, args []string, timeoutSeconds uint32, user
 		TimedOut: ex.Exec.GetTimedOut(),
 		PID:      ex.Exec.GetPid(),
 	}, err
+}
+
+func (c *Client) Upload(path string, content io.Reader, size uint64, mode uint32, checksum []byte) (uint64, error) {
+	if _, err := c.sendUpload(&vmp.Request{Command: &vmp.Request_UploadStart{UploadStart: &vmp.UploadStartRequest{
+		Path:   path,
+		Mode:   mode,
+		Size:   size,
+		Sha256: checksum,
+	}}}); err != nil {
+		return 0, err
+	}
+	if err := c.uploadChunks(content); err != nil {
+		return 0, err
+	}
+	upload, err := c.sendUpload(&vmp.Request{Command: &vmp.Request_UploadFinish{UploadFinish: &vmp.UploadFinishRequest{}}})
+	if err != nil {
+		return 0, err
+	}
+	return upload.GetBytesWritten(), nil
+}
+
+func (c *Client) uploadChunks(content io.Reader) error {
+	buf := make([]byte, uploadChunkSize)
+	for {
+		n, readErr := io.ReadFull(content, buf)
+		if n > 0 {
+			chunk := append([]byte(nil), buf[:n]...)
+			if _, err := c.sendUpload(&vmp.Request{Command: &vmp.Request_UploadChunk{UploadChunk: &vmp.UploadChunkRequest{
+				Data: chunk,
+			}}}); err != nil {
+				return err
+			}
+		}
+		if readErr != nil {
+			if errors.Is(readErr, io.EOF) || errors.Is(readErr, io.ErrUnexpectedEOF) {
+				break
+			}
+			return fmt.Errorf("read upload content: %w", readErr)
+		}
+	}
+	return nil
+}
+
+func (c *Client) sendUpload(req *vmp.Request) (*vmp.UploadResponse, error) {
+	resp, err := c.send(req)
+	if err != nil {
+		return nil, err
+	}
+	upload, ok := resp.GetResult().(*vmp.Response_Upload)
+	if !ok {
+		return nil, errors.New("unexpected response type")
+	}
+	return upload.Upload, nil
 }
 
 func (c *Client) send(req *vmp.Request) (*vmp.Response, error) {
