@@ -8,8 +8,10 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -24,16 +26,17 @@ const (
 )
 
 var (
-	modws2_32       = windows.NewLazySystemDLL("ws2_32.dll")
-	procWSASocket   = modws2_32.NewProc("WSASocketW")
-	procBind        = modws2_32.NewProc("bind")
-	procConnect     = modws2_32.NewProc("connect")
-	procListen      = modws2_32.NewProc("listen")
-	procAccept      = modws2_32.NewProc("accept")
-	procClosesocket = modws2_32.NewProc("closesocket")
-	procRecv        = modws2_32.NewProc("recv")
-	procSend        = modws2_32.NewProc("send")
-	procSelect      = modws2_32.NewProc("select")
+	modws2_32               = windows.NewLazySystemDLL("ws2_32.dll")
+	procWSASocket           = modws2_32.NewProc("WSASocketW")
+	procBind                = modws2_32.NewProc("bind")
+	procConnect             = modws2_32.NewProc("connect")
+	procListen              = modws2_32.NewProc("listen")
+	procAccept              = modws2_32.NewProc("accept")
+	procClosesocket         = modws2_32.NewProc("closesocket")
+	procRecv                = modws2_32.NewProc("recv")
+	procSend                = modws2_32.NewProc("send")
+	procSelect              = modws2_32.NewProc("select")
+	procCancelSynchronousIo = windows.NewLazySystemDLL("kernel32.dll").NewProc("CancelSynchronousIo")
 )
 
 // rawSockaddrVM mirrors struct sockaddr_vm (16 bytes, same layout as Linux).
@@ -124,6 +127,37 @@ type vsockListener struct {
 	closed bool
 }
 
+// A reset can consume readiness before accept opens its new driver handle.
+// Cancel that pending file-create request on its issuing OS thread.
+func acceptWithCancellation(sock uintptr, peer *rawSockaddrVM, peerLen *int32) (uintptr, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	thread, err := windows.OpenThread(windows.THREAD_TERMINATE, false, windows.GetCurrentThreadId())
+	if err != nil {
+		return errSock, err
+	}
+	defer func() { _ = windows.CloseHandle(thread) }()
+	done := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				_, _, _ = procCancelSynchronousIo.Call(uintptr(thread))
+			}
+		}
+	}()
+	r1, _, e := procAccept.Call(sock, uintptr(unsafe.Pointer(peer)), uintptr(unsafe.Pointer(peerLen)))
+	close(done)
+	<-stopped
+	return r1, e
+}
+
 func (l *vsockListener) Accept() (net.Conn, error) {
 	for {
 		l.mu.Lock()
@@ -152,10 +186,10 @@ func (l *vsockListener) Accept() (net.Conn, error) {
 		}
 		var peer rawSockaddrVM
 		peerLen := int32(unsafe.Sizeof(peer))
-		r1, _, e = procAccept.Call(l.sock, uintptr(unsafe.Pointer(&peer)), uintptr(unsafe.Pointer(&peerLen)))
+		r1, e = acceptWithCancellation(l.sock, &peer, &peerLen)
 		l.mu.Unlock()
 		if r1 == errSock {
-			if errors.Is(e, windows.WSAECONNRESET) || errors.Is(e, windows.WSAECONNABORTED) {
+			if errors.Is(e, windows.WSAECONNRESET) || errors.Is(e, windows.WSAECONNABORTED) || errors.Is(e, windows.ERROR_OPERATION_ABORTED) || errors.Is(e, windows.WSAEINTR) || errors.Is(e, syscall.Errno(windows.STATUS_CANCELLED)) {
 				continue
 			}
 			return nil, os.NewSyscallError("accept", e)
@@ -230,10 +264,6 @@ func (c *vsockConn) Close() error {
 	if c.closed.Swap(true) {
 		return net.ErrClosed
 	}
-	// Start the shutdown handshake while the driver can still route peer replies.
-	// Its cleanup removes the socket from lookup before waiting for that reply.
-	_ = windows.Shutdown(windows.Handle(c.sock), windows.SHUT_RDWR)
-	_ = windows.CancelIoEx(windows.Handle(c.sock), nil)
 	r1, _, e := procClosesocket.Call(c.sock)
 	if isSocketError(r1) {
 		return os.NewSyscallError("closesocket", e)

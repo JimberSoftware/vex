@@ -68,3 +68,27 @@ func TestListenerCloseUnblocksAccept(t *testing.T) {
 		t.Fatalf("Accept on a closed listener = %v", err)
 	}
 }
+
+func TestPendingDriverAcceptCanBeCancelled(t *testing.T) {
+	ln, err := Listen(^uint32(0), 32801)
+	if errors.Is(err, windows.WSAEAFNOSUPPORT) || errors.Is(err, windows.WSAEPROTONOSUPPORT) {
+		t.Skipf("VirtIO socket driver unavailable: %v", err)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	listener := ln.(*vsockListener)
+	var peer rawSockaddrVM
+	peerLen := int32(16)
+	done := make(chan error, 1)
+	go func() { _, err := acceptWithCancellation(listener.sock, &peer, &peerLen); done <- err }()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("empty listener accept unexpectedly succeeded")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("pending driver accept was not cancelled")
+	}
+}
