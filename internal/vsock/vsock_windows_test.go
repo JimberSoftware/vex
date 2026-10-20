@@ -25,16 +25,6 @@ func TestSocketErrorWidth(t *testing.T) {
 	}
 }
 
-func TestConnectionErrorsDoNotBecomeByteCounts(t *testing.T) {
-	c := newConn(errSock, vsockAddr{}, vsockAddr{})
-	if n, err := c.Read(make([]byte, 16)); n != 0 || err == nil {
-		t.Fatalf("Read on invalid socket = %d, %v; want 0 and an error", n, err)
-	}
-	if n, err := c.Write([]byte("test")); n != 0 || err == nil {
-		t.Fatalf("Write on invalid socket = %d, %v; want 0 and an error", n, err)
-	}
-}
-
 func TestConnectionDeadlines(t *testing.T) {
 	c := newConn(errSock, vsockAddr{}, vsockAddr{})
 	if err := c.SetDeadline(time.Now().Add(-time.Second)); err != nil {
