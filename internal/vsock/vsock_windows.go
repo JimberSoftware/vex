@@ -19,10 +19,13 @@ import (
 )
 
 const (
-	afVSock            = 40          // AF_VSOCK — exposed by virtio-win vsock driver
-	sockStream         = 1           // SOCK_STREAM
-	errSock            = ^uintptr(0) // pointer-sized INVALID_SOCKET
-	acceptPollInterval = 10 * time.Millisecond
+	afVSock               = 40          // AF_VSOCK — exposed by virtio-win vsock driver
+	sockStream            = 1           // SOCK_STREAM
+	errSock               = ^uintptr(0) // pointer-sized INVALID_SOCKET
+	acceptPollInterval    = 10 * time.Millisecond
+	readPollInterval      = 100 * time.Millisecond
+	soSendTimeout         = 0x1005     // SO_SNDTIMEO, absent from x/sys/windows.
+	infiniteSocketTimeout = 0x7fffffff // VirtIO uses LONG_MAX for no timeout.
 )
 
 var (
@@ -194,6 +197,17 @@ func (l *vsockListener) Accept() (net.Conn, error) {
 			}
 			return nil, os.NewSyscallError("accept", e)
 		}
+		// Accepted sockets do not inherit VirtIO's infinite timeout defaults.
+		// Poll reads so a reset that fails to wake a pending driver read cannot
+		// strand its goroutine. The polling timeout is retried below.
+		if err := windows.SetsockoptInt(windows.Handle(r1), windows.SOL_SOCKET, windows.SO_RCVTIMEO, int(readPollInterval/time.Millisecond)); err != nil {
+			closeSocket(r1)
+			return nil, err
+		}
+		if err := windows.SetsockoptInt(windows.Handle(r1), windows.SOL_SOCKET, soSendTimeout, infiniteSocketTimeout); err != nil {
+			closeSocket(r1)
+			return nil, err
+		}
 		return &vsockConn{sock: r1, local: l.addr, remote: vsockAddr{CID: peer.CID, Port: peer.Port}}, nil
 	}
 }
@@ -230,14 +244,22 @@ func (c *vsockConn) Read(b []byte) (int, error) {
 	if len(b) == 0 {
 		return 0, nil
 	}
-	r1, _, e := procRecv.Call(c.sock, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), 0)
-	if isSocketError(r1) {
-		return 0, os.NewSyscallError("recv", e)
+	for {
+		if c.closed.Load() {
+			return 0, net.ErrClosed
+		}
+		r1, _, e := procRecv.Call(c.sock, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), 0)
+		if isSocketError(r1) {
+			if errors.Is(e, windows.WSAETIMEDOUT) {
+				continue
+			}
+			return 0, os.NewSyscallError("recv", e)
+		}
+		if r1 == 0 {
+			return 0, io.EOF
+		}
+		return int(r1), nil
 	}
-	if r1 == 0 {
-		return 0, io.EOF
-	}
-	return int(r1), nil
 }
 
 func (c *vsockConn) Write(b []byte) (int, error) {
