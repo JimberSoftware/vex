@@ -10,8 +10,19 @@ import socket
 import time
 
 
+class GuestSocket(socket.socket):
+    def __exit__(self, *args):
+        # Match the host client: the legacy Windows driver needs full shutdown
+        # before the host releases its descriptor to finish guest-side cleanup.
+        try:
+            self.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        return super().__exit__(*args)
+
+
 def probe(cid, port, index):
-    with socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM) as conn:
+    with GuestSocket(socket.AF_VSOCK, socket.SOCK_STREAM) as conn:
         conn.settimeout(5)
         if index % 20 == 0:
             conn.setblocking(False)

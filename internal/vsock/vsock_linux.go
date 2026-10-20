@@ -26,7 +26,7 @@ func Dial(cid, port uint32) (net.Conn, error) {
 type shutdownConn struct{ *vsock.Conn }
 
 func (c *shutdownConn) Close() error {
-	raw, err := c.Conn.SyscallConn()
+	raw, err := c.SyscallConn()
 	if err == nil {
 		_ = raw.Control(func(fd uintptr) { _ = unix.Shutdown(int(fd), unix.SHUT_RDWR) })
 	}
