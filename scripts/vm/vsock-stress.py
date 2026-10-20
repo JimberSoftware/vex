@@ -3,15 +3,33 @@
 
 import argparse
 import collections
+import errno
 import concurrent.futures
 import json
 import socket
 import time
 
 
+class GuestSocket(socket.socket):
+    def __exit__(self, *args):
+        # Match the host client: the legacy Windows driver needs full shutdown
+        # before the host releases its descriptor to finish guest-side cleanup.
+        try:
+            self.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        return super().__exit__(*args)
+
+
 def probe(cid, port, index):
-    with socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM) as conn:
+    with GuestSocket(socket.AF_VSOCK, socket.SOCK_STREAM) as conn:
         conn.settimeout(5)
+        if index % 20 == 0:
+            conn.setblocking(False)
+            result = conn.connect_ex((cid, port))
+            if result not in (0, errno.EINPROGRESS, errno.EWOULDBLOCK):
+                raise OSError(result, "connect_ex failed")
+            return "closed_during_connect"
         conn.connect((cid, port))
         # Include peers that close before a request and midway through a frame.
         if index % 10 == 0:
