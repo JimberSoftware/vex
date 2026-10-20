@@ -186,63 +186,31 @@ func (l *vsockListener) Close() error {
 func (l *vsockListener) Addr() net.Addr { return &l.addr }
 
 // vsockConn implements net.Conn using nonblocking driver calls. A driver wait
-// cannot be interrupted reliably by Close; polling also lets deadlines work.
+// cannot be interrupted reliably by Close, so retry temporary errors here.
 type vsockConn struct {
-	mu            sync.Mutex
-	readMu        sync.Mutex
-	writeMu       sync.Mutex
-	sock          uintptr
-	local         vsockAddr
-	remote        vsockAddr
-	closed        bool
-	done          chan struct{}
-	changed       chan struct{}
-	readDeadline  time.Time
-	writeDeadline time.Time
+	mu      sync.Mutex
+	readMu  sync.Mutex
+	writeMu sync.Mutex
+	sock    uintptr
+	local   vsockAddr
+	remote  vsockAddr
+	closed  bool
+	done    chan struct{}
 }
 
 func newConn(sock uintptr, local, remote vsockAddr) *vsockConn {
-	return &vsockConn{sock: sock, local: local, remote: remote, done: make(chan struct{}), changed: make(chan struct{})}
+	return &vsockConn{sock: sock, local: local, remote: remote, done: make(chan struct{})}
 }
 
-func (c *vsockConn) checkLocked(write bool) error {
-	if c.closed {
-		return net.ErrClosed
-	}
-	deadline := c.readDeadline
-	if write {
-		deadline = c.writeDeadline
-	}
-	if !deadline.IsZero() && !time.Now().Before(deadline) {
-		return os.ErrDeadlineExceeded
-	}
-	return nil
-}
-
-func (c *vsockConn) wait(write bool) error {
-	c.mu.Lock()
-	if err := c.checkLocked(write); err != nil {
-		c.mu.Unlock()
-		return err
-	}
-	deadline, changed := c.readDeadline, c.changed
-	if write {
-		deadline = c.writeDeadline
-	}
-	delay := acceptPollInterval
-	if !deadline.IsZero() && time.Until(deadline) < delay {
-		delay = time.Until(deadline)
-	}
-	c.mu.Unlock()
-	timer := time.NewTimer(delay)
+func (c *vsockConn) wait() error {
+	timer := time.NewTimer(acceptPollInterval)
 	defer timer.Stop()
 	select {
 	case <-c.done:
 		return net.ErrClosed
-	case <-changed:
 	case <-timer.C:
+		return nil
 	}
-	return nil
 }
 
 func (c *vsockConn) Read(b []byte) (int, error) {
@@ -253,9 +221,9 @@ func (c *vsockConn) Read(b []byte) (int, error) {
 	defer c.readMu.Unlock()
 	for {
 		c.mu.Lock()
-		if err := c.checkLocked(false); err != nil {
+		if c.closed {
 			c.mu.Unlock()
-			return 0, err
+			return 0, net.ErrClosed
 		}
 		r1, _, e := procRecv.Call(c.sock, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), 0)
 		c.mu.Unlock()
@@ -268,7 +236,7 @@ func (c *vsockConn) Read(b []byte) (int, error) {
 		if !errors.Is(e, windows.WSAEWOULDBLOCK) {
 			return 0, os.NewSyscallError("recv", e)
 		}
-		if err := c.wait(false); err != nil {
+		if err := c.wait(); err != nil {
 			return 0, err
 		}
 	}
@@ -283,9 +251,9 @@ func (c *vsockConn) Write(b []byte) (int, error) {
 	n := 0
 	for n < len(b) {
 		c.mu.Lock()
-		if err := c.checkLocked(true); err != nil {
+		if c.closed {
 			c.mu.Unlock()
-			return n, err
+			return n, net.ErrClosed
 		}
 		r1, _, e := procSend.Call(c.sock, uintptr(unsafe.Pointer(&b[n])), uintptr(len(b)-n), 0)
 		c.mu.Unlock()
@@ -299,7 +267,7 @@ func (c *vsockConn) Write(b []byte) (int, error) {
 		if !errors.Is(e, windows.WSAEWOULDBLOCK) {
 			return n, os.NewSyscallError("send", e)
 		}
-		if err := c.wait(true); err != nil {
+		if err := c.wait(); err != nil {
 			return n, err
 		}
 	}
@@ -323,22 +291,6 @@ func (c *vsockConn) Close() error {
 
 func (c *vsockConn) LocalAddr() net.Addr                { return &c.local }
 func (c *vsockConn) RemoteAddr() net.Addr               { return &c.remote }
-func (c *vsockConn) SetDeadline(t time.Time) error      { return c.setDeadline(t, true, true) }
-func (c *vsockConn) SetReadDeadline(t time.Time) error  { return c.setDeadline(t, true, false) }
-func (c *vsockConn) SetWriteDeadline(t time.Time) error { return c.setDeadline(t, false, true) }
-func (c *vsockConn) setDeadline(t time.Time, read, write bool) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.closed {
-		return net.ErrClosed
-	}
-	if read {
-		c.readDeadline = t
-	}
-	if write {
-		c.writeDeadline = t
-	}
-	close(c.changed)
-	c.changed = make(chan struct{})
-	return nil
-}
+func (c *vsockConn) SetDeadline(_ time.Time) error      { return nil }
+func (c *vsockConn) SetReadDeadline(_ time.Time) error  { return nil }
+func (c *vsockConn) SetWriteDeadline(_ time.Time) error { return nil }

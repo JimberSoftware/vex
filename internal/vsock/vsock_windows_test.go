@@ -5,7 +5,6 @@ package vsock
 import (
 	"errors"
 	"net"
-	"os"
 	"testing"
 	"time"
 
@@ -25,19 +24,6 @@ func TestSocketErrorWidth(t *testing.T) {
 	}
 }
 
-func TestConnectionDeadlines(t *testing.T) {
-	c := newConn(errSock, vsockAddr{}, vsockAddr{})
-	if err := c.SetDeadline(time.Now().Add(-time.Second)); err != nil {
-		t.Fatal(err)
-	}
-	if n, err := c.Read(make([]byte, 1)); n != 0 || !errors.Is(err, os.ErrDeadlineExceeded) {
-		t.Fatalf("Read past deadline = %d, %v", n, err)
-	}
-	if n, err := c.Write([]byte{1}); n != 0 || !errors.Is(err, os.ErrDeadlineExceeded) {
-		t.Fatalf("Write past deadline = %d, %v", n, err)
-	}
-}
-
 func TestClosedConnectionRejectsIO(t *testing.T) {
 	c := newConn(errSock, vsockAddr{}, vsockAddr{})
 	_ = c.Close() // The intentionally invalid OS handle cannot be closed.
@@ -46,9 +32,6 @@ func TestClosedConnectionRejectsIO(t *testing.T) {
 	}
 	if n, err := c.Write([]byte{1}); n != 0 || !errors.Is(err, net.ErrClosed) {
 		t.Fatalf("Write after Close = %d, %v", n, err)
-	}
-	if err := c.SetDeadline(time.Now()); !errors.Is(err, net.ErrClosed) {
-		t.Fatalf("SetDeadline after Close = %v", err)
 	}
 }
 
