@@ -20,6 +20,17 @@ jobs:
       - name: Run tests
         run: go test -race -timeout=5m ./...
 
+  windows-vsock:
+    name: Windows VSOCK
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Run Windows socket regression tests
+        run: go test -timeout=1m ./internal/vsock
+
   macos-package:
     name: Build macOS installer
     runs-on: macos-15
