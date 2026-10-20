@@ -25,7 +25,7 @@ func TestSocketErrorWidth(t *testing.T) {
 }
 
 func TestClosedConnectionRejectsIO(t *testing.T) {
-	c := newConn(errSock, vsockAddr{}, vsockAddr{})
+	c := &vsockConn{sock: errSock}
 	_ = c.Close() // The intentionally invalid OS handle cannot be closed.
 	if n, err := c.Read(make([]byte, 1)); n != 0 || !errors.Is(err, net.ErrClosed) {
 		t.Fatalf("Read after Close = %d, %v", n, err)
