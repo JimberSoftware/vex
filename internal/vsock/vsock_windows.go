@@ -230,6 +230,10 @@ func (c *vsockConn) Close() error {
 	if c.closed.Swap(true) {
 		return net.ErrClosed
 	}
+	// Start the shutdown handshake while the driver can still route peer replies.
+	// Its cleanup removes the socket from lookup before waiting for that reply.
+	_ = windows.Shutdown(windows.Handle(c.sock), windows.SHUT_RDWR)
+	_ = windows.CancelIoEx(windows.Handle(c.sock), nil)
 	r1, _, e := procClosesocket.Call(c.sock)
 	if isSocketError(r1) {
 		return os.NewSyscallError("closesocket", e)
