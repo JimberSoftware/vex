@@ -48,6 +48,7 @@ Section "Install"
     nsExec::ExecToLog 'sc create ${SERVICE_NAME} binPath= "${INSTALL_DIR}\vex-agent.exe" start= auto'
     nsExec::ExecToLog 'sc description ${SERVICE_NAME} "Vex guest agent - vsock listener for host-to-guest communication"'
     nsExec::ExecToLog 'sc failure ${SERVICE_NAME} reset= 86400 actions= restart/5000/restart/10000/restart/30000'
+    nsExec::ExecToLog 'sc failureflag ${SERVICE_NAME} 1'
 
     ; Register event log source
     WriteRegStr HKLM "SYSTEM\CurrentControlSet\Services\EventLog\Application\${SERVICE_NAME}" "EventMessageFile" "$SYSDIR\EventCreate.exe"
