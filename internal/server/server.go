@@ -1,6 +1,7 @@
 package server
 
 import (
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -11,6 +12,7 @@ type AgentClient interface {
 	Ping() error
 	HostInfo() (client.HostInfo, error)
 	Exec(command string, args []string, timeoutSeconds uint32, username string, detach bool) (client.ExecResult, error)
+	Upload(path string, content io.Reader, size uint64, mode uint32, checksum []byte) (uint64, error)
 	Close() error
 }
 
@@ -31,5 +33,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /vms/{cid}/ping", s.handlePing)
 	mux.HandleFunc("POST /vms/{cid}/host-info", s.handleHostInfo)
 	mux.HandleFunc("POST /vms/{cid}/exec", s.handleExec)
+	mux.HandleFunc("PUT /vms/{cid}/files", s.handleUpload)
 	return mux
 }

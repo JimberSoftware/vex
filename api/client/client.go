@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +18,7 @@ import (
 )
 
 const defaultTimeout = 30 * time.Second
+const defaultUploadTimeout = 10 * time.Minute
 
 type Client struct {
 	baseURL    string
@@ -78,6 +82,48 @@ func (cl *Client) Exec(ctx context.Context, cid uint32, req api.ExecRequest) (*a
 	return &result, nil
 }
 
+func (cl *Client) Upload(ctx context.Context, cid uint32, upload api.UploadRequest, content io.Reader) (*api.UploadResponse, error) {
+	if upload.Path == "" {
+		return nil, errors.New("upload path is required")
+	}
+	if upload.Size > math.MaxInt64 {
+		return nil, errors.New("upload size exceeds supported range")
+	}
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, defaultUploadTimeout)
+		defer cancel()
+	}
+
+	values := url.Values{"path": []string{upload.Path}}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, cl.vmPath(cid, "files")+"?"+values.Encode(), content)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.ContentLength = int64(upload.Size)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set(api.UploadModeHeader, strconv.FormatUint(uint64(upload.Mode), 8))
+	req.Header.Set(api.UploadSHA256Header, upload.SHA256)
+	for key, val := range cl.headers {
+		req.Header.Set(key, val)
+	}
+
+	resp, err := cl.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err := responseError(resp); err != nil {
+		return nil, err
+	}
+
+	var result api.UploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode upload response: %w", err)
+	}
+	return &result, nil
+}
+
 func (cl *Client) vmPath(cid uint32, endpoint string) string {
 	return cl.baseURL + "/vms/" + strconv.FormatUint(uint64(cid), 10) + "/" + endpoint
 }
@@ -111,19 +157,26 @@ func (cl *Client) do(ctx context.Context, method, url string, body any) (*http.R
 		return nil, err
 	}
 
-	if resp.StatusCode >= http.StatusBadRequest {
-		defer resp.Body.Close()
-		apiErr := &APIError{StatusCode: resp.StatusCode}
-		var errResp api.ErrorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Error != "" {
-			apiErr.Message = errResp.Error
-		} else {
-			apiErr.Message = http.StatusText(resp.StatusCode)
-		}
-		return nil, apiErr
+	if err := responseError(resp); err != nil {
+		resp.Body.Close()
+		return nil, err
 	}
 
 	return resp, nil
+}
+
+func responseError(resp *http.Response) error {
+	if resp.StatusCode < http.StatusBadRequest {
+		return nil
+	}
+	apiErr := &APIError{StatusCode: resp.StatusCode}
+	var errResp api.ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Error != "" {
+		apiErr.Message = errResp.Error
+	} else {
+		apiErr.Message = http.StatusText(resp.StatusCode)
+	}
+	return apiErr
 }
 
 func encodeBody(body any) (io.Reader, error) {

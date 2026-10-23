@@ -1,9 +1,13 @@
 package client_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"log/slog"
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jimbersoftware/vex/client"
@@ -73,5 +77,46 @@ func TestClientExecDetach(t *testing.T) {
 	}
 	if ex.PID <= 0 {
 		t.Errorf("expected positive PID, got %d", ex.PID)
+	}
+}
+
+func TestClientUpload(t *testing.T) {
+	t.Parallel()
+	agent, done := agentClient(t)
+	defer done()
+
+	content := bytes.Repeat([]byte("native test binary"), 150000)
+	checksum := sha256.Sum256(content)
+	destination := filepath.Join(t.TempDir(), "integration.test")
+
+	written, err := agent.Upload(destination, bytes.NewReader(content), uint64(len(content)), 0o750, checksum[:])
+	if err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+	if written != uint64(len(content)) {
+		t.Fatalf("bytes written: got %d, want %d", written, len(content))
+	}
+	got, err := os.ReadFile(destination)
+	if err != nil {
+		t.Fatalf("read uploaded file: %v", err)
+	}
+	if !bytes.Equal(got, content) {
+		t.Fatalf("uploaded content: got %q, want %q", got, content)
+	}
+}
+
+func TestClientUploadRejectsChecksumMismatch(t *testing.T) {
+	t.Parallel()
+	c, done := agentClient(t)
+	defer done()
+
+	content := []byte("native test binary")
+	destination := filepath.Join(t.TempDir(), "integration.test")
+	_, err := c.Upload(destination, bytes.NewReader(content), uint64(len(content)), 0o750, make([]byte, sha256.Size))
+	if err == nil {
+		t.Fatal("expected checksum mismatch")
+	}
+	if _, statErr := os.Stat(destination); !os.IsNotExist(statErr) {
+		t.Fatalf("destination should not exist after failed upload: %v", statErr)
 	}
 }
